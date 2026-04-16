@@ -20,7 +20,7 @@ const getTimeAgo = (dateString: string) => {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'official' | 'following' | 'recommended' | 'working'>('official');
-  const { user, logout, isLoading: isUserLoading, hasUnreadMessages, hasUnreadNotifications, hasUnreadLikes, markLikesAsRead } = useUser();
+  const { user, logout, isLoading: isUserLoading, hasUnreadMessages, hasUnreadNotifications, hasUnreadLikes, markLikesAsRead, markNotificationsAsRead } = useUser();
 
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -278,6 +278,7 @@ export default function Home() {
                                if (data) setLikeMessages(data);
                                setIsLoadingLikes(false);
                                markLikesAsRead();
+                               markNotificationsAsRead();
                            });
                      }}
                      className="relative text-black hover:text-[#777777] transition-colors p-1"

@@ -75,8 +75,8 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                 if (profile && profile.phone) {
                     const { data: mappedCast } = await supabase
                         .from('casts')
-                        .select('id, name, store_id, phone, back_settings')
-                        .eq('phone', profile.phone)
+                        .select('id, name, store_id, phone, back_settings, login_id')
+                        .eq('login_id', profile.phone)
                         .maybeSingle();
                     
                     if (mappedCast) {
