@@ -37,14 +37,27 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
   const [isLoadingFollowers, setIsLoadingFollowers] = useState(false);
   const [likedFollowerIds, setLikedFollowerIds] = useState<Set<string>>(new Set());
 
-  const [profileData, setProfileData] = useState({
+  interface ProfileData {
+    name: string;
+    image: string;
+    cover: string;
+    bio: string;
+    workingToday: boolean;
+    slotsLeft?: number | null;
+    nextAvailableTime?: string | null;
+    statusText?: string;
+    _avatarFile?: File;
+    _coverFile?: File;
+  }
+
+  const [profileData, setProfileData] = useState<ProfileData>({
     name: "",
     image: "",
     cover: "",
     bio: "",
     workingToday: false,
   });
-  const [editForm, setEditForm] = useState(profileData);
+  const [editForm, setEditForm] = useState<ProfileData>(profileData);
   const [pendingCrop, setPendingCrop] = useState<{ src: string, type: 'avatar' | 'cover' } | null>(null);
 
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
