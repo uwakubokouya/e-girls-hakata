@@ -12,6 +12,7 @@ export interface UserSettings {
   leave_footprints: boolean;
   reservation_reminders: boolean;
   app_lock_enabled: boolean;
+  accepts_dms?: boolean;
 }
 
 export interface User {
