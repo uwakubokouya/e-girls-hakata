@@ -329,7 +329,7 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                     <ChevronLeft size={24} className="stroke-[1.5]" />
                 </button>
                 <div className="flex-1 text-center font-normal text-sm pr-10 tracking-widest font-bold">
-                    予約する
+                    予約する{cast?.name ? `（${cast.name}）` : ''}
                 </div>
             </header>
 
