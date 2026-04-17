@@ -6,7 +6,8 @@ import { ChevronLeft, MessageCircle, Calendar, Lock, ArrowRight, UserPlus, Arrow
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/providers/UserProvider';
 import { useState, useEffect } from "react";
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
+import { fetchBusinessEndTime, getLogicalBusinessDate, getAdjustedMinutes, getAdjustedNowMins } from "@/utils/businessTime";
 import MediaWatermark from '@/components/security/MediaWatermark';
 import ImageCropperModal from '@/components/ui/ImageCropperModal';
 
@@ -310,7 +311,9 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
 
       // 5. Fetch Today's Shift Status
       if (storeCast?.id) {
-          const todayStr = new Date().toLocaleDateString('sv-SE').split('T')[0];
+          const now = new Date();
+          const businessEndTime = await fetchBusinessEndTime(supabase);
+          const todayStr = getLogicalBusinessDate(now, businessEndTime.hour, businessEndTime.min);
           const { data: availabilityData } = await supabase
             .rpc('get_public_availability', {
                 p_store_id: 'ef92279f-3f19-47e7-b542-69de5906ab9b',
@@ -392,25 +395,24 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
                            }
                        }
 
-                       if (cursorM + MIN_GAP > seM) {
-                            if (am >= seM) { statusText = "受付終了"; } else { statusText = "ご予約完売"; }
-                           if (myAvails[0] && myAvails[0].next_shift_date) {
-                               const dt = new Date(myAvails[0].next_shift_date);
-                               nextAvailableTime = `����o��: ${dt.getMonth() + 1}/${dt.getDate()}`;
-                           } else {
-                               nextAvailableTime = "����o��: ����";
-                           }
-                       } else {
-                           if (cursorM <= am) {
-                               nextAvailableTime = "�ҋ@��";
-                           } else {
-                               let h = Math.floor(cursorM / 60);
-                               let m = cursorM % 60;
-                               if (h >= 24) h -= 24;
-                               nextAvailableTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                           }
-                       }
-
+                        if (cursorM + MIN_GAP > seM) {
+                             if (am >= seM) { statusText = "受付終了"; } else { statusText = "ご予約完売"; }
+                            if (myAvails[0] && myAvails[0].next_shift_date) {
+                                const dt = new Date(myAvails[0].next_shift_date);
+                                nextAvailableTime = `次回出勤: ${dt.getMonth() + 1}/${dt.getDate()}`;
+                            } else {
+                                nextAvailableTime = "次回出勤: 未定";
+                            }
+                        } else {
+                            if (cursorM <= am) {
+                                nextAvailableTime = "待機中";
+                            } else {
+                                let h = Math.floor(cursorM / 60);
+                                let m = cursorM % 60;
+                                if (h >= 24) h -= 24;
+                                nextAvailableTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                            }
+                        }
                       if (shift_start && shift_end) {
                           const sH = parseInt(shift_start.split(':')[0]);
                           const eH = parseInt(shift_end.split(':')[0]) || 24;

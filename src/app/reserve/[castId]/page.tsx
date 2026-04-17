@@ -3,7 +3,8 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Check, CalendarDays, KeyRound, Clock } from "lucide-react";
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
+import { fetchBusinessEndTime, getLogicalBusinessDate, getAdjustedMinutes, getAdjustedNowMins } from "@/utils/businessTime";
 
 // Helper to parse time string "HH:MM" to minutes since start of day (06:00 is base 360, 01:00 is 25:00=1500)
 const parseMins = (t: any) => {
@@ -48,6 +49,7 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
     // Dynamic Slots calculation
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
     const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+    const [businessEndTime, setBusinessEndTime] = useState<{hour: number, min: number}>({hour: 6, min: 0});
 
     // 1. Initial Data Fetch
     useEffect(() => {
@@ -106,11 +108,17 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                     setCourses(mastersData.filter(m => m.type && ['COURSE', 'OPTION', 'DISCOUNT', 'NOMINATION'].includes(m.type.toUpperCase())));
                 }
 
+                // Fetch business time once on init
+                const bTime = await fetchBusinessEndTime(supabase);
+                setBusinessEndTime(bTime);
+
                 // Fetch shifts for the next 14 days via RPC (bypasses RLS safely)
                 const next14DaysPromises = Array.from({length: 14}, async (_, i) => {
-                    const d = new Date();
+                    const now = new Date();
+                    const logicalTodayStr = getLogicalBusinessDate(now, bTime.hour, bTime.min);
+                    const d = new Date(logicalTodayStr);
                     d.setDate(d.getDate() + i);
-                    const dateStr = d.toLocaleDateString('sv-SE').split('T')[0]; 
+                    const dateStr = d.toLocaleDateString('sv-SE').split('T')[0];
                     
                     const { data } = await supabase.rpc('get_public_availability', {
                         p_store_id: activeStoreId,
@@ -153,8 +161,8 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                     
                     if (castRows.length > 0 && castRows[0].shift_start && castRows[0].shift_end) {
                         const baseShift = castRows[0];
-                        let sStart = parseMins(baseShift.shift_start);
-                        const sEnd = parseMins(baseShift.shift_end);
+                        let sStart = getAdjustedMinutes(baseShift.shift_start, businessEndTime.hour);
+                        const sEnd = getAdjustedMinutes(baseShift.shift_end, businessEndTime.hour);
                         
                         // Extract all bookings for this day
                         const activeBookings = castRows
@@ -166,10 +174,9 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                         
                         // If selectedDate is today, ensure we don't show past times
                         const now = new Date();
-                        const todayStr = now.toLocaleDateString('sv-SE').split('T')[0];
+                        const todayStr = getLogicalBusinessDate(now, businessEndTime.hour, businessEndTime.min);
                         if (selectedDate === todayStr) {
-                            const currentMins = now.getHours() * 60 + now.getMinutes();
-                            const adjCurrentMins = now.getHours() < 6 ? currentMins + 24 * 60 : currentMins;
+                            const adjCurrentMins = getAdjustedNowMins(now, businessEndTime.hour);
                             // 現在時刻より少し余裕を持たせて10分単位で丸める
                             const roundedNow = Math.ceil(adjCurrentMins / 10) * 10;
                             if (roundedNow > sStart) {
@@ -198,8 +205,8 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                         
                         // 2. Exact fit slots (Smart Slots)
                         for (const b of activeBookings) {
-                            const bStart = parseMins(b.start);
-                            const bEnd = parseMins(b.end);
+                            const bStart = getAdjustedMinutes(b.start, businessEndTime.hour);
+                            const bEnd = getAdjustedMinutes(b.end, businessEndTime.hour);
                             const bEndWithBuffer = bEnd + 10; // 前の予約の片付け時間（10分）を考慮
                             
                             // Immediately after previous booking ends
@@ -218,8 +225,8 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                         const validSlots = Array.from(candidateSet).filter(cStart => {
                             const cEnd = cStart + requiredMins;
                             for (const b of activeBookings) {
-                                const bStart = parseMins(b.start);
-                                const bEnd = parseMins(b.end);
+                                const bStart = getAdjustedMinutes(b.start, businessEndTime.hour);
+                                const bEnd = getAdjustedMinutes(b.end, businessEndTime.hour);
                                 const bEndWithBuffer = bEnd + 10;
                                 // Check overlap
                                 if (cStart < bEndWithBuffer && cEnd > bStart) {

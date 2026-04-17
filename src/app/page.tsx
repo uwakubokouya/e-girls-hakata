@@ -5,6 +5,7 @@ import { useUser } from "@/providers/UserProvider";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { MessageSquare, Bell, Lock, ArrowLeft, Heart, X } from "lucide-react";
+import { fetchBusinessEndTime, getLogicalBusinessDate, getAdjustedMinutes, getAdjustedNowMins } from "@/utils/businessTime";
 
 const getTimeAgo = (dateString: string) => {
     const now = new Date();
@@ -63,7 +64,9 @@ export default function Home() {
        }
 
        // --- 出勤情報（shifts）と空き状況（sales）の連動 ---
-       const todayStr = new Date().toLocaleDateString('sv-SE').split('T')[0];
+       const now = new Date();
+       const businessEndTime = await fetchBusinessEndTime(supabase);
+       const todayStr = getLogicalBusinessDate(now, businessEndTime.hour, businessEndTime.min);
        const { data: availabilityData } = await supabase
            .rpc('get_public_availability', {
                p_store_id: 'ef92279f-3f19-47e7-b542-69de5906ab9b',
@@ -110,20 +113,13 @@ export default function Home() {
                let isAbsent = avail.attendance_status === 'absent';
                
                const now = new Date();
-               // Note: Timezone is Japanese local for users, but logic here assumes server/client roughly same
-               const currentHour = now.getHours();
-               const currentMin = now.getMinutes();
-               const currentMinTotal = currentHour * 60 + currentMin;
 
                if (isAbsent) {
                    statusText = "お休み";
-                   isWorkingToday = false; // Hide from standard "Working Today" logic
+                   isWorkingToday = false;
                } else if (avail.shift_end) {
-                   const eParts = avail.shift_end.split(':');
-                   let eH = parseInt(eParts[0]);
-                   if (eH < 6) eH += 24; // If shift ends at 01:00 am, treat as 25:00
-                   const eMin = eH * 60 + parseInt(eParts[1] || '0');
-                   const adjCurrentMin = currentHour < 6 ? currentHour * 60 + 24 * 60 + currentMin : currentMinTotal;
+                   const eMin = getAdjustedMinutes(avail.shift_end, businessEndTime.hour);
+                   const adjCurrentMin = getAdjustedNowMins(now, businessEndTime.hour);
                    if (adjCurrentMin >= eMin) {
                        statusText = "受付終了";
                        if (avail.next_shift_date) {
@@ -136,22 +132,16 @@ export default function Home() {
                }
                
                if (statusText === "本日出勤中") {
-                   let ssP = avail.shift_start.split(':');
-                   let seP = avail.shift_end.split(':');
-                   let ssH = parseInt(ssP[0]); if(ssH < 6) ssH += 24;
-                   let seH = parseInt(seP[0]); if(seH < 6) seH += 24;
-                   const ssM = ssH * 60 + parseInt(ssP[1] || '0');
-                   const seM = seH * 60 + parseInt(seP[1] || '0');
-                   const am = currentHour < 6 ? currentHour * 60 + 24 * 60 + currentMin : currentMinTotal;
+                   const ssM = getAdjustedMinutes(avail.shift_start, businessEndTime.hour);
+                   const seM = getAdjustedMinutes(avail.shift_end, businessEndTime.hour);
+                   const am = getAdjustedNowMins(now, businessEndTime.hour);
                    
                    let cursorM = Math.max(am, ssM);
                    
                    const parsedBookings = avail.bookings.map((b: any) => {
-                       let bsH = parseInt(b.start.split(':')[0]); if(bsH < 6) bsH += 24;
-                       let beH = parseInt(b.end.split(':')[0]); if(beH < 6) beH += 24;
                        return {
-                           startM: bsH * 60 + parseInt(b.start.split(':')[1] || '0'),
-                           endM: beH * 60 + parseInt(b.end.split(':')[1] || '0') + 10
+                           startM: getAdjustedMinutes(b.start, businessEndTime.hour),
+                           endM: getAdjustedMinutes(b.end, businessEndTime.hour) + 10
                        };
                    }).sort((a: any, b: any) => a.startM - b.startM);
 

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Search as SearchIcon, SlidersHorizontal, X, Check, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchBusinessEndTime, getLogicalBusinessDate, getAdjustedMinutes, getAdjustedNowMins } from "@/utils/businessTime";
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,7 +66,9 @@ export default function SearchPage() {
         }
         
         // 本日の日付（YYYY-MM-DD）を取得
-        const todayStr = new Date().toLocaleDateString('sv-SE').split('T')[0];
+        const now = new Date();
+                const businessEndTime = await fetchBusinessEndTime(supabase);
+                const todayStr = getLogicalBusinessDate(now, businessEndTime.hour, businessEndTime.min);
         let workingCastIds: string[] = [];
         
         const { data: availabilityData } = await supabase
