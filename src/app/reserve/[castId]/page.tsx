@@ -48,6 +48,8 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
     const [customerNotes, setCustomerNotes] = useState("");
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     
     // Dynamic Slots calculation
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
@@ -308,10 +310,84 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
         return `${d.getMonth() + 1}/${d.getDate()}(${days[d.getDay()]})`;
     };
 
+    const handleSubmit = async () => {
+        if (!user) {
+            setErrorMsg("予約にはログインが必要です。");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const cPrice = selectedCourseItem?.price || 0;
+            const nPrice = selectedNomination?.price || 0;
+            const oPrice = selectedOptions.reduce((sum, o) => sum + (o.price || 0), 0);
+            const dPrice = selectedDiscount?.price ? Math.abs(selectedDiscount.price) * -1 : 0;
+            const total = cPrice + nPrice + oPrice + dPrice;
+
+            const reservationData = {
+                customer_id: user.id,
+                cast_id: cast?.id,
+                store_id: cast?.store_id,
+                reserve_date: selectedDate,
+                reserve_time: selectedSlot,
+                course_id: selectedCourseItem?.id,
+                course_name: selectedCourseItem?.name || selectedCourseItem?.label,
+                course_price: cPrice,
+                nomination_id: selectedNomination?.id,
+                nomination_name: selectedNomination?.name || selectedNomination?.label,
+                nomination_price: nPrice,
+                options: selectedOptions.length > 0 ? selectedOptions.map(o => ({id: o.id, name: o.name || o.label, price: o.price})) : null,
+                discount_id: selectedDiscount?.id,
+                discount_name: selectedDiscount?.name || selectedDiscount?.label,
+                discount_price: dPrice,
+                total_price: Math.max(0, total),
+                customer_notes: customerNotes,
+                status: 'pending'
+            };
+
+            const { error } = await supabase.from('sns_reservations').insert(reservationData);
+
+            if (error) {
+                console.error("Reserve Error:", error);
+                setErrorMsg("ご予約の送信に失敗しました。" + error.message);
+            } else {
+                setIsSuccess(true);
+            }
+        } catch (e: any) {
+            setErrorMsg("エラーが発生しました。" + e.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (isSuccess) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center font-light">
+                <div className="w-16 h-16 bg-black text-white rounded-full flex items-center justify-center mb-6">
+                    <Check size={32} className="stroke-[1.5]" />
+                </div>
+                <h2 className="text-xl font-normal tracking-widest mb-4">予約リクエスト完了</h2>
+                <div className="text-sm tracking-widest leading-loose text-[#333333] mb-10">
+                    ご予約いただきありがとうございます。<br/>
+                    店舗からの折り返しのご連絡をもちまして<br/>
+                    【確定】とさせていただきます。<br/><br/>
+                    確認ができ次第、速やかにご連絡差し上げますので<br/>
+                    今しばらくお待ちくださいませ。
+                </div>
+                <button 
+                    onClick={() => router.push('/')}
+                    className="premium-btn w-full max-w-sm py-4 bg-black text-white text-sm tracking-widest"
+                >
+                    ホームへ戻る
+                </button>
             </div>
         );
     }
@@ -608,10 +684,16 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                         次へ進む
                     </button>
                 ) : (
-                    <Link href="/" className="premium-btn py-4 flex items-center justify-center gap-3 w-full text-sm tracking-widest bg-black text-white hover:bg-white hover:text-black hover:border-black border transition-all">
-                        <Check size={18} className="stroke-[1.5]" />
-                        予約を確定する
-                    </Link>
+                    <button 
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="premium-btn py-4 flex items-center justify-center gap-3 w-full text-sm tracking-widest bg-black text-white hover:bg-white hover:text-black hover:border-black border transition-all disabled:opacity-50">
+                        {isSubmitting ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            <><Check size={18} className="stroke-[1.5]" />予約を確定する</>
+                        )}
+                    </button>
                 )}
             </div>
         </div>
