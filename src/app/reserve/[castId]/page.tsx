@@ -3,6 +3,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Check, CalendarDays, KeyRound, Clock } from "lucide-react";
 import { useRouter } from 'next/navigation';
+import { useUser } from "@/providers/UserProvider";
 import { supabase } from "@/lib/supabase";
 import { fetchBusinessEndTime, getLogicalBusinessDate, getAdjustedMinutes, getAdjustedNowMins } from "@/utils/businessTime";
 
@@ -27,6 +28,7 @@ const formatTimeLabel = (mins: number) => {
 export default function ReservationPage({ params }: { params: Promise<{ castId: string }> }) {
     const { castId } = use(params);
     const router = useRouter();
+    const { user } = useUser();
     
     // UI steps
     const [step, setStep] = useState(1);
@@ -50,6 +52,32 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
     const [isLoadingSlots, setIsLoadingSlots] = useState(false);
     const [businessEndTime, setBusinessEndTime] = useState<{hour: number, min: number}>({hour: 6, min: 0});
+
+    // 0. Tracking
+    useEffect(() => {
+        if (!castId) return;
+        if (user?.role === 'cast' || user?.is_admin) return;
+        
+        const trackPV = async () => {
+            const TRACK_KEY = `last_reserve_click_${castId}`;
+            const lastTracked = sessionStorage.getItem(TRACK_KEY);
+            const now = Date.now();
+            
+            if (!lastTracked || now - parseInt(lastTracked) > 600000) {
+              sessionStorage.setItem(TRACK_KEY, now.toString());
+              try {
+                  const sessionObj = localStorage.getItem('anon_session_id');
+                  supabase.from('page_views').insert({
+                      page_type: 'reserve_click',
+                      target_id: castId,
+                      viewer_id: user?.id || null,
+                      session_id: sessionObj
+                  }).then(() => {});
+              } catch(e) {}
+            }
+        };
+        trackPV();
+    }, [castId, user]);
 
     // 1. Initial Data Fetch
     useEffect(() => {
