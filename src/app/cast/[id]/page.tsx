@@ -378,19 +378,22 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
                            };
                        }).sort((a: any, b: any) => a.startM - b.startM);
 
+                       const MIN_GAP = 50;
                        let bumped = true;
-                       while (bumped) {
+                       while (bumped && cursorM < seM) {
                            bumped = false;
                            for (const b of parsedBookings) {
-                               if (cursorM >= b.startM && cursorM < b.endM) {
-                                   cursorM = b.endM;
-                                   bumped = true;
+                               if (b.startM < (cursorM + MIN_GAP) && b.endM > cursorM) {
+                                   if (cursorM < b.endM) {
+                                       cursorM = b.endM;
+                                       bumped = true;
+                                   }
                                }
                            }
                        }
 
-                       if (cursorM >= seM) {
-                           statusText = "��t�I��";
+                       if (cursorM + MIN_GAP > seM) {
+                            if (am >= seM) { statusText = "受付終了"; } else { statusText = "ご予約完売"; }
                            if (myAvails[0] && myAvails[0].next_shift_date) {
                                const dt = new Date(myAvails[0].next_shift_date);
                                nextAvailableTime = `����o��: ${dt.getMonth() + 1}/${dt.getDate()}`;

@@ -155,18 +155,21 @@ export default function Home() {
                        };
                    }).sort((a: any, b: any) => a.startM - b.startM);
 
-                   let bumped = true;
-                   while (bumped) {
-                       bumped = false;
-                       for (const b of parsedBookings) {
-                           if (cursorM >= b.startM && cursorM < b.endM) {
-                               cursorM = b.endM;
-                               bumped = true;
+                   const MIN_GAP = 50;
+                       let bumped = true;
+                       while (bumped && cursorM < seM) {
+                           bumped = false;
+                           for (const b of parsedBookings) {
+                               if (b.startM < (cursorM + MIN_GAP) && b.endM > cursorM) {
+                                   if (cursorM < b.endM) {
+                                       cursorM = b.endM;
+                                       bumped = true;
+                                   }
+                               }
                            }
                        }
-                   }
 
-                   if (cursorM >= seM) {
+                   if (cursorM + MIN_GAP > seM) {
                             if (am >= seM) { statusText = "受付終了"; } else { statusText = "ご予約完売"; }
                        if (avail.next_shift_date) {
                            const dt = new Date(avail.next_shift_date);
