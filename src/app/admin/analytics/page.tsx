@@ -32,11 +32,9 @@ export default function AnalyticsAdminPage() {
     // Fetch casts for dropdown
     useEffect(() => {
         const fetchCasts = async () => {
-            const { data } = await supabase.from('sns_profiles').select('id, name');
+            const { data } = await supabase.from('sns_profiles').select('id, name').eq('role', 'cast');
             if (data) {
-                const { data: castsData } = await supabase.from('casts').select('id');
-                const castIds = new Set(castsData?.map(c => c.id) || []);
-                setCasts(data.filter(c => castIds.has(c.id)));
+                setCasts(data);
             }
         };
         fetchCasts();
