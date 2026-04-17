@@ -186,7 +186,7 @@ export default function SearchPage() {
                            let beH = parseInt(b.end.split(':')[0]); if(beH < 6) beH += 24;
                            return {
                                startM: bsH * 60 + parseInt(b.start.split(':')[1] || '0'),
-                               endM: beH * 60 + parseInt(b.end.split(':')[1] || '0')
+                               endM: beH * 60 + parseInt(b.end.split(':')[1] || '0') + 10
                            };
                        }).sort((a: any, b: any) => a.startM - b.startM);
 
