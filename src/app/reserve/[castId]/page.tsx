@@ -88,7 +88,7 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                 }
             }
                 
-            let activeStoreId = castData?.store_id || 'f0fc1c42-4523-4b15-b834-faae5250c115';
+            let activeStoreId = castData?.store_id || 'ef92279f-3f19-47e7-b542-69de5906ab9b';
             
             // Set dummy cast name if not found
             setCast(castData || { id: castId, name: "キャスト", store_id: activeStoreId });
@@ -117,7 +117,8 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                         p_date: dateStr
                     });
                     
-                    const shift = data?.find((s: any) => s.cast_id === castId);
+                    const targetId = castData?.id || castId;
+                    const shift = data?.find((s: any) => s.cast_id === targetId);
                     if (shift && shift.attendance_status !== 'absent' && shift.shift_start && shift.shift_end) {
                         return dateStr;
                     }
@@ -148,7 +149,7 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                 
                 if (availData && availData.length > 0) {
                     // Get all rows for this cast to extract multiple bookings
-                    const castRows = availData.filter((a: any) => a.cast_id === castId);
+                    const castRows = availData.filter((a: any) => a.cast_id === cast.id);
                     
                     if (castRows.length > 0 && castRows[0].shift_start && castRows[0].shift_end) {
                         const baseShift = castRows[0];

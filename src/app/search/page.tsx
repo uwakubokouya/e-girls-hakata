@@ -92,6 +92,31 @@ export default function SearchPage() {
            });
         }
 
+        const next7DaysPromises = Array.from({length: 14}, async (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() + i + 1); // 明日からの14日間
+            const dateStr = d.toLocaleDateString('sv-SE').split('T')[0];
+            const { data } = await supabase.rpc('get_public_availability', {
+               p_store_id: 'ef92279f-3f19-47e7-b542-69de5906ab9b',
+               p_date: dateStr
+            });
+            return { dateStr, data };
+        });
+        
+        const next7DaysResults = await Promise.all(next7DaysPromises);
+        
+        const nextShiftMap = new Map();
+        next7DaysResults.forEach((result) => {
+            if (result.data) {
+                result.data.forEach((row: any) => {
+                    const hasValidShift = row.attendance_status !== 'absent' && (!!row.shift_start || !!row.shift_end);
+                    if (hasValidShift && !nextShiftMap.has(row.cast_id)) {
+                        nextShiftMap.set(row.cast_id, result.dateStr);
+                    }
+                });
+            }
+        });
+
         const mergedCasts = activeCasts.map(cast => {
             const profile = profilesData.find(p => p.phone === cast.login_id);
             let isWorkingToday = availabilityMap.has(cast.id);
@@ -103,18 +128,30 @@ export default function SearchPage() {
                 if (isWorkingToday) {
                    const avail = availabilityMap.get(cast.id);
                    
-                   statusText = "本日出勤中";
                    let isAbsent = avail.attendance_status === 'absent';
+                   const hasShift = !!avail.shift_start || !!avail.shift_end;
                    
                    const now = new Date();
                    const currentHour = now.getHours();
                    const currentMin = now.getMinutes();
                    const currentMinTotal = currentHour * 60 + currentMin;
 
-                   if (isAbsent) {
-                       statusText = "お休み";
+                   if (isAbsent || !hasShift) {
+                       if (isAbsent) {
+                           statusText = "お休み";
+                       } else {
+                           statusText = null;
+                       }
                        isWorkingToday = false;
-                   } else if (avail.shift_end) {
+                       const nextDateRaw = avail.next_shift_date || nextShiftMap.get(cast.id);
+                       if (nextDateRaw) {
+                           const d = new Date(nextDateRaw);
+                           nextAvailableTime = `次回出勤: ${d.getMonth() + 1}/${d.getDate()}`;
+                       } else {
+                           nextAvailableTime = "次回出勤: 未定";
+                       }
+                   } else {
+                       statusText = "本日出勤中";
                        const eParts = avail.shift_end.split(':');
                        let eH = parseInt(eParts[0]);
                        if (eH < 6) eH += 24;
@@ -122,37 +159,66 @@ export default function SearchPage() {
                        const adjCurrentMin = currentHour < 6 ? currentHour * 60 + 24 * 60 + currentMin : currentMinTotal;
                        if (adjCurrentMin >= eMin) {
                            statusText = "受付終了";
-                           if (avail.next_shift_date) {
-                               const d = new Date(avail.next_shift_date);
+                           const nextDateRaw = avail.next_shift_date || nextShiftMap.get(cast.id);
+                           if (nextDateRaw) {
+                               const d = new Date(nextDateRaw);
                                nextAvailableTime = `次回出勤: ${d.getMonth() + 1}/${d.getDate()}`;
                            } else {
                                nextAvailableTime = "次回出勤: 未定";
                            }
+                           isWorkingToday = true; // 表示上の都合でtrueにしておく
                        }
                    }
                    
                    if (statusText === "本日出勤中") {
-                       let isBookedNow = false;
-                       let nextEnd = null;
+                       let ssP = avail.shift_start.split(':');
+                       let seP = avail.shift_end.split(':');
+                       let ssH = parseInt(ssP[0]); if(ssH < 6) ssH += 24;
+                       let seH = parseInt(seP[0]); if(seH < 6) seH += 24;
+                       const ssM = ssH * 60 + parseInt(ssP[1] || '0');
+                       const seM = seH * 60 + parseInt(seP[1] || '0');
+                       const am = currentHour < 6 ? currentHour * 60 + 24 * 60 + currentMin : currentMinTotal;
                        
-                       for (const b of avail.bookings) {
-                          const bsP = b.start.split(':');
-                          const beP = b.end.split(':');
-                          let bsH = parseInt(bsP[0]); if(bsH < 6) bsH += 24;
-                          let beH = parseInt(beP[0]); if(beH < 6) beH += 24;
-                          const bsM = bsH * 60 + parseInt(bsP[1] || '0');
-                          const beM = beH * 60 + parseInt(beP[1] || '0');
-                          const am = currentHour < 6 ? currentHour * 60 + 24 * 60 + currentMin : currentMinTotal;
-                          
-                          if (am >= bsM && am < beM) {
-                              isBookedNow = true;
-                              nextEnd = b.end;
-                          }
+                       let cursorM = Math.max(am, ssM);
+                       
+                       const parsedBookings = avail.bookings.map((b: any) => {
+                           let bsH = parseInt(b.start.split(':')[0]); if(bsH < 6) bsH += 24;
+                           let beH = parseInt(b.end.split(':')[0]); if(beH < 6) beH += 24;
+                           return {
+                               startM: bsH * 60 + parseInt(b.start.split(':')[1] || '0'),
+                               endM: beH * 60 + parseInt(b.end.split(':')[1] || '0')
+                           };
+                       }).sort((a: any, b: any) => a.startM - b.startM);
+
+                       let bumped = true;
+                       while (bumped) {
+                           bumped = false;
+                           for (const b of parsedBookings) {
+                               if (cursorM >= b.startM && cursorM < b.endM) {
+                                   cursorM = b.endM;
+                                   bumped = true;
+                               }
+                           }
                        }
-                       if (!isBookedNow) {
-                           nextAvailableTime = "待機中";
+
+                       if (cursorM >= seM) {
+                           statusText = "受付終了";
+                           const nextDateRaw = avail.next_shift_date || nextShiftMap.get(cast.id);
+                           if (nextDateRaw) {
+                               const dt = new Date(nextDateRaw);
+                               nextAvailableTime = `次回出勤: ${dt.getMonth() + 1}/${dt.getDate()}`;
+                           } else {
+                               nextAvailableTime = "次回出勤: 未定";
+                           }
                        } else {
-                           nextAvailableTime = nextEnd || avail.shift_start;
+                           if (cursorM <= am) {
+                               nextAvailableTime = "待機中";
+                           } else {
+                               let h = Math.floor(cursorM / 60);
+                               let m = cursorM % 60;
+                               if (h >= 24) h -= 24;
+                               nextAvailableTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                           }
                        }
                        
                        if (avail.shift_start && avail.shift_end) {
@@ -161,6 +227,14 @@ export default function SearchPage() {
                            const totalSlots = (eH <= sH ? eH + 24 - sH : eH - sH);
                            slotsLeft = Math.max(0, totalSlots - avail.bookings.length);
                        }
+                   }
+                } else {
+                   const nextDateRaw = nextShiftMap.get(cast.id);
+                   if (nextDateRaw) {
+                       const d = new Date(nextDateRaw);
+                       nextAvailableTime = `次回出勤: ${d.getMonth() + 1}/${d.getDate()}`;
+                   } else {
+                       nextAvailableTime = "次回出勤: 未定";
                    }
                 }
                 
@@ -188,22 +262,56 @@ export default function SearchPage() {
                 };
             });
 
-        // 稼働状況と「新人」ステータスに応じてリアルタイムにソート（新人 > 待機中 > 予約受付中(次回〇〇〜) > 受付終了 > お休み/未定）
+        // 並び順： 新人 > 待機中 > 次回早い順 > 受付終了 > お休み > 次回出勤日の近い順 > シフト未定
         mergedCasts.sort((a, b) => {
             const getScore = (c: any) => {
                 let score = 0;
-                if (c.statusText === '本日出勤中') {
-                    if (c.nextAvailableTime === '待機中') score = 40;
-                    else score = 30; 
-                } else if (c.statusText === '受付終了') {
-                    score = 20;
-                } else {
-                    score = 10;
+                
+                if (c.isNew) {
+                    score += 1000000; // 新人は常に最優先
                 }
                 
-                // 新人は無条件で最優先 (+100)
-                if (c.isNew) {
-                    score += 100;
+                let nextShiftScore = 0;
+                if (c.nextAvailableTime && c.nextAvailableTime.includes('次回出勤: ') && !c.nextAvailableTime.includes('未定')) {
+                    const match = c.nextAvailableTime.match(/次回出勤: (\d+)\/(\d+)/);
+                    if (match) {
+                        const m = parseInt(match[1]);
+                        const d = parseInt(match[2]);
+                        const currentMonth = new Date().getMonth() + 1;
+                        let targetMonth = m;
+                        if (targetMonth < currentMonth - 2) targetMonth += 12;
+                        const daysApprox = targetMonth * 31 + d;
+                        nextShiftScore = 1000 - daysApprox; 
+                        if (nextShiftScore < 0) nextShiftScore = 0;
+                    }
+                }
+                
+                if (c.statusText === '本日出勤中') {
+                    if (c.nextAvailableTime === '待機中') {
+                        score += 500000;
+                    } else {
+                        score += 400000;
+                        if (c.nextAvailableTime && c.nextAvailableTime.includes && c.nextAvailableTime.includes(':') && !c.nextAvailableTime.includes('次回出勤')) {
+                            const parts = c.nextAvailableTime.split(':');
+                            let h = parseInt(parts[0]);
+                            const m = parseInt(parts[1]);
+                            if (!isNaN(h) && !isNaN(m)) {
+                                if (h < 6) h += 24;
+                                const minutes = h * 60 + m;
+                                score += (2000 - minutes);
+                            }
+                        }
+                    } 
+                } else if (c.statusText === '受付終了') {
+                    score += 300000 + nextShiftScore;
+                } else if (c.statusText === 'お休み') {
+                    score += 200000 + nextShiftScore;
+                } else {
+                    if (nextShiftScore > 0) {
+                        score += 100000 + nextShiftScore;
+                    } else {
+                        score += 0;
+                    }
                 }
                 
                 return score;
@@ -421,17 +529,23 @@ export default function SearchPage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
                         
                         <div className="absolute top-3 left-3 z-20 flex flex-col items-start gap-1.5 pointer-events-none max-w-[calc(100%-24px)]">
-                            {cast.isWorkingToday ? (
-                                cast.statusText === '受付終了' ? (
-                                    <div className="bg-black/70 backdrop-blur text-[#E5E5E5] text-[9px] px-2 py-1 font-bold tracking-widest border border-white/20">
-                                        受付終了
-                                    </div>
-                                ) : (
-                                    <div className="bg-white/90 backdrop-blur text-black text-[9px] px-2 py-1 font-bold tracking-widest flex items-center gap-1 shadow-sm border border-white whitespace-nowrap">
-                                        <span className={`w-1.5 h-1.5 shrink-0 rounded-none ${cast.nextAvailableTime === '待機中' ? 'bg-[#E02424] animate-[pulse_2s_ease-in-out_infinite]' : 'bg-black'}`}></span>
-                                        <span className="truncate">{cast.nextAvailableTime === '待機中' ? '待機中' : `次回 ${cast.nextAvailableTime}〜`}</span>
-                                    </div>
-                                )
+                            {cast.statusText === 'お休み' ? (
+                                <div className="bg-black/80 backdrop-blur text-white text-[9px] px-2 py-1 font-bold tracking-widest border border-white/20">
+                                    お休み
+                                </div>
+                            ) : cast.statusText === '受付終了' ? (
+                                <div className="bg-black/70 backdrop-blur text-[#E5E5E5] text-[9px] px-2 py-1 font-bold tracking-widest border border-white/20">
+                                    受付終了
+                                </div>
+                            ) : cast.statusText === '本日出勤中' ? (
+                                <div className="bg-white/90 backdrop-blur text-black text-[9px] px-2 py-1 font-bold tracking-widest flex items-center gap-1 shadow-sm border border-white whitespace-nowrap">
+                                    <span className={`w-1.5 h-1.5 shrink-0 rounded-none ${cast.nextAvailableTime === '待機中' ? 'bg-[#E02424] animate-[pulse_2s_ease-in-out_infinite]' : 'bg-black'}`}></span>
+                                    <span className="truncate">{cast.nextAvailableTime === '待機中' ? '待機中' : `次回 ${cast.nextAvailableTime}〜`}</span>
+                                </div>
+                            ) : cast.nextAvailableTime && cast.nextAvailableTime.includes('次回出勤: ') && !cast.nextAvailableTime.includes('未定') ? (
+                                <div className="bg-black/70 backdrop-blur text-[#E5E5E5] text-[9px] px-2 py-1 font-bold tracking-widest border border-white/20">
+                                    <span className="truncate">{cast.nextAvailableTime.replace('次回出勤: ', '次回出勤 ')}</span>
+                                </div>
                             ) : null}
 
                             {cast.isNew && (

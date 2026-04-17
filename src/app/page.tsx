@@ -136,27 +136,53 @@ export default function Home() {
                }
                
                if (statusText === "本日出勤中") {
-                   let isBookedNow = false;
-                   let nextEnd = null;
+                   let ssP = avail.shift_start.split(':');
+                   let seP = avail.shift_end.split(':');
+                   let ssH = parseInt(ssP[0]); if(ssH < 6) ssH += 24;
+                   let seH = parseInt(seP[0]); if(seH < 6) seH += 24;
+                   const ssM = ssH * 60 + parseInt(ssP[1] || '0');
+                   const seM = seH * 60 + parseInt(seP[1] || '0');
+                   const am = currentHour < 6 ? currentHour * 60 + 24 * 60 + currentMin : currentMinTotal;
                    
-                   for (const b of avail.bookings) {
-                      const bsP = b.start.split(':');
-                      const beP = b.end.split(':');
-                      let bsH = parseInt(bsP[0]); if(bsH < 6) bsH += 24;
-                      let beH = parseInt(beP[0]); if(beH < 6) beH += 24;
-                      const bsM = bsH * 60 + parseInt(bsP[1] || '0');
-                      const beM = beH * 60 + parseInt(beP[1] || '0');
-                      const am = currentHour < 6 ? currentHour * 60 + 24 * 60 + currentMin : currentMinTotal;
-                      
-                      if (am >= bsM && am < beM) {
-                          isBookedNow = true;
-                          nextEnd = b.end;
-                      }
+                   let cursorM = Math.max(am, ssM);
+                   
+                   const parsedBookings = avail.bookings.map((b: any) => {
+                       let bsH = parseInt(b.start.split(':')[0]); if(bsH < 6) bsH += 24;
+                       let beH = parseInt(b.end.split(':')[0]); if(beH < 6) beH += 24;
+                       return {
+                           startM: bsH * 60 + parseInt(b.start.split(':')[1] || '0'),
+                           endM: beH * 60 + parseInt(b.end.split(':')[1] || '0')
+                       };
+                   }).sort((a: any, b: any) => a.startM - b.startM);
+
+                   let bumped = true;
+                   while (bumped) {
+                       bumped = false;
+                       for (const b of parsedBookings) {
+                           if (cursorM >= b.startM && cursorM < b.endM) {
+                               cursorM = b.endM;
+                               bumped = true;
+                           }
+                       }
                    }
-                   if (!isBookedNow) {
-                       nextAvailableTime = "待機中";
+
+                   if (cursorM >= seM) {
+                       statusText = "受付終了";
+                       if (avail.next_shift_date) {
+                           const dt = new Date(avail.next_shift_date);
+                           nextAvailableTime = `次回出勤: ${dt.getMonth() + 1}/${dt.getDate()}`;
+                       } else {
+                           nextAvailableTime = "次回出勤: 未定";
+                       }
                    } else {
-                       nextAvailableTime = nextEnd || avail.shift_start;
+                       if (cursorM <= am) {
+                           nextAvailableTime = "待機中";
+                       } else {
+                           let h = Math.floor(cursorM / 60);
+                           let m = cursorM % 60;
+                           if (h >= 24) h -= 24;
+                           nextAvailableTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                       }
                    }
                    
                    // Slots left logic
@@ -284,7 +310,7 @@ export default function Home() {
                      className="relative text-black hover:text-[#777777] transition-colors p-1"
                   >
                      <Bell size={22} className="stroke-[1.5]" />
-                     {(hasUnreadNotifications || hasUnreadLikes) && (
+                     {hasUnreadLikes && (
                        <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#E02424] border-2 border-white rounded-full"></div>
                      )}
                   </button>
