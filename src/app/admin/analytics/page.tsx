@@ -57,7 +57,7 @@ export default function AnalyticsAdminPage() {
                 let query = supabase
                     .from('page_views')
                     .select('created_at, target_id, page_type')
-                    .in('page_type', activeTab === 'home' ? ['home'] : ['cast_profile', 'reserve_click'])
+                    .in('page_type', activeTab === 'home' ? ['home', 'reserve_click'] : ['cast_profile', 'reserve_click'])
                     .gte('created_at', startDate.toISOString())
                     .lte('created_at', endDate.toISOString());
 
