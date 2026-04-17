@@ -115,11 +115,18 @@ export default function MyPage() {
 
         {/* Admin Links */}
         {user?.is_admin && (
-          <div className="bg-white border border-black shadow-sm">
-            <Link href="/admin/announcement" className="w-full px-6 py-4 flex items-center justify-between hover:bg-[#F9F9F9] transition-colors">
+          <div className="bg-white border border-black shadow-sm flex flex-col">
+            <Link href="/admin/announcement" className="w-full px-6 py-4 flex items-center justify-between hover:bg-[#F9F9F9] transition-colors border-b border-[#E5E5E5]">
               <div className="flex items-center gap-3">
                 <ShieldAlert size={18} className="stroke-[1.5] text-black" />
                 <span className="text-xs tracking-widest font-bold">【管理】お知らせ配信</span>
+              </div>
+              <ChevronRight size={16} className="text-[#777777]" />
+            </Link>
+            <Link href="/admin/analytics" className="w-full px-6 py-4 flex items-center justify-between hover:bg-[#F9F9F9] transition-colors">
+              <div className="flex items-center gap-3">
+                <ShieldAlert size={18} className="stroke-[1.5] text-black" />
+                <span className="text-xs tracking-widest font-bold">【管理】アクセス解析</span>
               </div>
               <ChevronRight size={16} className="text-[#777777]" />
             </Link>

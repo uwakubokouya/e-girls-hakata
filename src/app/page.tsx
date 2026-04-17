@@ -23,6 +23,32 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'official' | 'following' | 'recommended' | 'working'>('official');
   const { user, logout, isLoading: isUserLoading, hasUnreadMessages, hasUnreadNotifications, hasUnreadLikes, markLikesAsRead, markNotificationsAsRead } = useUser();
 
+  useEffect(() => {
+    const trackPV = async () => {
+      const TRACK_KEY = 'last_pv_home';
+      const lastTracked = sessionStorage.getItem(TRACK_KEY);
+      const now = Date.now();
+      
+      // Track once per hour per session (3600000ms)
+      if (!lastTracked || now - parseInt(lastTracked) > 3600000) {
+          sessionStorage.setItem(TRACK_KEY, now.toString());
+          try {
+              let sessionObj = localStorage.getItem('anon_session_id');
+              if (!sessionObj) {
+                  sessionObj = 'sess_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                  localStorage.setItem('anon_session_id', sessionObj);
+              }
+              await supabase.from('page_views').insert({
+                  page_type: 'home',
+                  viewer_id: user?.id || null,
+                  session_id: sessionObj
+              });
+          } catch(e) { console.error('PV tracking error', e); }
+      }
+    };
+    if (!isUserLoading) trackPV();
+  }, [user, isUserLoading]);
+
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
