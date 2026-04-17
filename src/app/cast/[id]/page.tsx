@@ -369,7 +369,7 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
                        
                        let cursorM = Math.max(am, ssM);
                        
-                       const parsedBookings = bookings.map((b) => {
+                       const parsedBookings = bookings.map((b: any) => {
                            let bsH = parseInt(b.start.split(':')[0]); if(bsH < 6) bsH += 24;
                            let beH = parseInt(b.end.split(':')[0]); if(beH < 6) beH += 24;
                            return {
