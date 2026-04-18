@@ -274,15 +274,13 @@ export default function AnalyticsAdminPage() {
                                         {dailyUserCounts.map((count, i) => {
                                             const isToday = new Date().getDate() === (i + 1) && new Date().getMonth() === selectedDate.getMonth();
                                             return (
-                                                <div key={i} className={`flex items-center justify-between p-4 border-b border-[#E5E5E5] last:border-b-0 ${isToday ? 'bg-[#F9F9F9]' : ''}`}>
-                                                    <span className={`text-sm tracking-widest ${isToday ? 'font-bold' : ''}`}>
-                                                        {i + 1}日
-                                                    </span>
-                                                    <div className="flex items-end gap-1 w-16 justify-end">
-                                                        <span className={`text-base tracking-wider ${isToday ? 'font-bold' : ''}`}>
-                                                            {count.toLocaleString()}
-                                                        </span>
-                                                        <span className="text-[10px] text-[#777777] mb-[2px]">人</span>
+                                                <div key={i} className={`flex items-center justify-between text-[10px] uppercase px-2 py-1.5 border-b border-[#E5E5E5] last:border-b-0 ${isToday ? 'bg-white' : 'bg-[#F9F9F9]'}`}>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[#777777] font-bold">{i + 1}日 {isToday && <span className="bg-black text-white px-1 ml-1 text-[8px] rounded-none">TODAY</span>}</span>
+                                                    </div>
+                                                    <div className="font-bold text-black flex items-center gap-2">
+                                                        <span className="w-12 text-right">{count.toLocaleString()}</span>
+                                                        <span className="w-8 text-right text-[#777777]">人</span>
                                                     </div>
                                                 </div>
                                             );
@@ -321,22 +319,15 @@ export default function AnalyticsAdminPage() {
                                             <div 
                                                 key={c.id} 
                                                 onClick={() => setSelectedCastId(c.id)}
-                                                className="flex items-center justify-between p-4 border-b border-[#E5E5E5] last:border-b-0 hover:bg-[#F9F9F9] transition-colors cursor-pointer"
+                                                className="flex items-center justify-between text-[10px] uppercase bg-[#F9F9F9] px-2 py-1.5 border-b border-[#E5E5E5] last:border-b-0 hover:bg-white transition-colors cursor-pointer"
                                             >
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`text-[10px] font-bold w-5 h-5 flex items-center justify-center border ${idx < 3 ? 'bg-black text-white border-black' : 'bg-[#E5E5E5] text-[#777777] border-[#E5E5E5]'}`}>
-                                                        {idx + 1}
-                                                    </span>
-                                                    <span className="text-sm tracking-widest">{c.name}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`w-3.5 h-3.5 rounded-none shrink-0 flex items-center justify-center text-[8px] font-bold ${idx < 3 ? 'bg-black text-white' : 'bg-[#E5E5E5] text-[#777777]'}`}>{idx + 1}</span>
+                                                    <span className="text-[#777777] font-bold truncate max-w-[120px]">{c.name}</span>
                                                 </div>
-                                                <div className="flex flex-col items-end gap-1">
-                                                    <div className="flex items-end gap-1">
-                                                        <span className="text-lg font-medium tracking-wider">{c.count.toLocaleString()}</span>
-                                                        <span className="text-[10px] text-[#777777] mb-[2px]">PV</span>
-                                                    </div>
-                                                    <div className="text-[9px] text-[#AAAAAA] tracking-widest">
-                                                        予約へ: {c.reserve.toLocaleString()}
-                                                    </div>
+                                                <div className="font-bold text-black flex items-center gap-2">
+                                                    <span className="w-14 text-right">{c.count.toLocaleString()} <span className="text-[8px] font-normal text-[#777777]">PV</span></span>
+                                                    <span className="w-16 text-right text-[#777777]">予約: {c.reserve.toLocaleString()}</span>
                                                 </div>
                                             </div>
                                         ))
@@ -360,23 +351,13 @@ export default function AnalyticsAdminPage() {
                                     {dailyCounts.map((count, i) => {
                                         const isToday = new Date().getDate() === (i + 1) && new Date().getMonth() === selectedDate.getMonth();
                                         return (
-                                        <div key={i} className={`flex items-center justify-between p-4 border-b border-[#E5E5E5] last:border-b-0 ${isToday ? 'bg-[#F9F9F9]' : ''}`}>
-                                            <span className={`text-sm tracking-widest ${isToday ? 'font-bold' : ''}`}>
-                                                {i + 1}日
-                                            </span>
-                                            <div className="flex shrink-0 items-center justify-end gap-3 min-w-[80px]">
-                                                <div className="flex items-end gap-1 w-16 justify-end">
-                                                    <span className={`text-base tracking-wider ${isToday ? 'font-bold' : ''}`}>
-                                                        {count.toLocaleString()}
-                                                    </span>
-                                                    <span className="text-[10px] text-[#777777] mb-[2px]">PV</span>
-                                                </div>
-                                                <div className="flex items-end gap-1 w-20 justify-end border-l border-[#E5E5E5] pl-3">
-                                                    <span className="text-base tracking-wider text-[#777777]">
-                                                        {dailyReserveCounts[i].toLocaleString()}
-                                                    </span>
-                                                    <span className="text-[10px] text-[#AAAAAA] mb-[2px]">予約</span>
-                                                </div>
+                                        <div key={i} className={`flex items-center justify-between text-[10px] uppercase px-2 py-1.5 border-b border-[#E5E5E5] last:border-b-0 ${isToday ? 'bg-white' : 'bg-[#F9F9F9]'}`}>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[#777777] font-bold">{i + 1}日 {isToday && <span className="bg-black text-white px-1 ml-1 text-[8px] rounded-none">TODAY</span>}</span>
+                                            </div>
+                                            <div className="font-bold text-black flex items-center gap-2">
+                                                <span className="w-14 text-right">{count.toLocaleString()} <span className="text-[8px] font-normal text-[#777777] ml-0.5">PV</span></span>
+                                                <span className="w-18 text-right text-[#777777] border-l border-[#E5E5E5] pl-2">予約: {dailyReserveCounts[i].toLocaleString()}</span>
                                             </div>
                                         </div>
                                     )})}
