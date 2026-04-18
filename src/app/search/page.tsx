@@ -268,7 +268,7 @@ export default function SearchPage() {
                 };
             });
 
-        // 並び順： 新人 > 待機中 > 次回早い順 > 受付終了 > お休み > 次回出勤日の近い順 > シフト未定
+        // 並び順： 新人 > 待機中 > 次回早い順 > ご予約完売 > 受付終了 > お休み > 次回出勤日の近い順 > シフト未定
         mergedCasts.sort((a: any, b: any) => {
             const getScore = (c: any) => {
                 let score = 0;
@@ -308,9 +308,9 @@ export default function SearchPage() {
                             }
                         }
                     } 
-                } else if (c.statusText === '受付終了') {
-                    score += 300000 + nextShiftScore;
                 } else if (c.statusText === 'ご予約完売') {
+                    score += 300000 + nextShiftScore;
+                } else if (c.statusText === '受付終了') {
                     score += 250000 + nextShiftScore;
                 } else if (c.statusText === 'お休み') {
                     score += 200000 + nextShiftScore;
