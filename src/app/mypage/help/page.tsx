@@ -3,9 +3,12 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, MessageCircle, Phone, ChevronRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { useUser } from "@/providers/UserProvider";
 
 export default function HelpAndSupportPage() {
   const router = useRouter();
+  const { user } = useUser();
+  const isCastOrStore = user?.role === 'cast' || user?.role === 'store';
   
   // Accordion state
   const [openFaqId, setOpenFaqId] = useState<string | null>(null);
@@ -78,68 +81,70 @@ export default function HelpAndSupportPage() {
                 <h2 className="text-sm font-bold tracking-widest">ご利用ガイド</h2>
             </div>
             <div className="bg-white border border-[#E5E5E5]">
-                <Link href="/mypage/help/system" className="flex items-center justify-between p-4 border-b border-[#E5E5E5] hover:bg-[#F9F9F9]">
-                    <span className="text-xs tracking-widest">料金システムについて</span>
+                <Link href="/mypage/help/about" className={`flex items-center justify-between p-4 hover:bg-[#F9F9F9] ${!isCastOrStore ? 'border-b border-[#E5E5E5]' : ''}`}>
+                    <span className="text-xs tracking-widest">HimeMatchのご利用ガイド</span>
                     <ChevronRight size={16} className="text-[#777777]" />
                 </Link>
-                <Link href="/mypage/help/flow" className="flex items-center justify-between p-4 border-b border-[#E5E5E5] hover:bg-[#F9F9F9]">
-                    <span className="text-xs tracking-widest">ご予約・キャンセルの流れ</span>
-                    <ChevronRight size={16} className="text-[#777777]" />
-                </Link>
-                <Link href="/mypage/help/rules" className="flex items-center justify-between p-4 hover:bg-[#F9F9F9]">
-                    <span className="text-xs tracking-widest text-[#E02424]">当店のご利用ルール（禁止事項）</span>
-                    <ChevronRight size={16} className="text-[#777777]" />
-                </Link>
+                {!isCastOrStore && (
+                  <Link href="/mypage/help/flow" className="flex items-center justify-between p-4 hover:bg-[#F9F9F9]">
+                      <span className="text-xs tracking-widest">ご予約・キャンセルの流れ</span>
+                      <ChevronRight size={16} className="text-[#777777]" />
+                  </Link>
+                )}
             </div>
         </section>
 
         {/* FAQ Section */}
-        <section>
-            <div className="mb-4">
-                <h2 className="text-sm font-bold tracking-widest">よくあるご質問</h2>
-            </div>
-            <div className="bg-white border border-[#E5E5E5]">
-                {faqs.map((faq, idx) => (
-                    <div key={faq.id} className={`${idx !== faqs.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}>
-                        <button 
-                            onClick={() => toggleFaq(faq.id)}
-                            className="w-full flex items-center justify-between p-4 hover:bg-[#F9F9F9] transition-colors text-left"
-                        >
-                            <span className="text-xs tracking-widest leading-relaxed pr-4 font-medium"><span className="text-black font-bold mr-2">Q.</span>{faq.q}</span>
-                            <ChevronDown size={16} className={`text-[#777777] transition-transform duration-300 ${openFaqId === faq.id ? 'rotate-180' : ''}`} />
-                        </button>
-                        <div 
-                            className={`overflow-hidden transition-all duration-300 ${openFaqId === faq.id ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}
-                        >
-                            <div className="p-4 pt-0 text-[11px] text-[#555] leading-loose tracking-widest bg-[#F9F9F9] border-t border-[#E5E5E5]">
-                                <span className="text-black font-bold mr-2">A.</span>{faq.a}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </section>
+        {!isCastOrStore && (
+          <section>
+              <div className="mb-4">
+                  <h2 className="text-sm font-bold tracking-widest">よくあるご質問</h2>
+              </div>
+              <div className="bg-white border border-[#E5E5E5]">
+                  {faqs.map((faq, idx) => (
+                      <div key={faq.id} className={`${idx !== faqs.length - 1 ? 'border-b border-[#E5E5E5]' : ''}`}>
+                          <button 
+                              onClick={() => toggleFaq(faq.id)}
+                              className="w-full flex items-center justify-between p-4 hover:bg-[#F9F9F9] transition-colors text-left"
+                          >
+                              <span className="text-xs tracking-widest leading-relaxed pr-4 font-medium"><span className="text-black font-bold mr-2">Q.</span>{faq.q}</span>
+                              <ChevronDown size={16} className={`text-[#777777] transition-transform duration-300 ${openFaqId === faq.id ? 'rotate-180' : ''}`} />
+                          </button>
+                          <div 
+                              className={`overflow-hidden transition-all duration-300 ${openFaqId === faq.id ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}
+                          >
+                              <div className="p-4 pt-0 text-[11px] text-[#555] leading-loose tracking-widest bg-[#F9F9F9] border-t border-[#E5E5E5]">
+                                  <span className="text-black font-bold mr-2">A.</span>{faq.a}
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </section>
+        )}
 
         {/* Legal Section */}
-        <section>
-            <div className="mb-4">
-                <h2 className="text-sm font-bold tracking-widest">法令・ポリシー</h2>
-            </div>
-            <div className="bg-white border border-[#E5E5E5]">
-                <Link href="/mypage/help/terms" className="flex items-center justify-between p-4 border-b border-[#E5E5E5] hover:bg-[#F9F9F9]">
-                    <span className="text-xs tracking-widest">利用規約</span>
-                    <ChevronRight size={16} className="text-[#777777]" />
-                </Link>
-                <Link href="/mypage/help/privacy" className="flex items-center justify-between p-4 border-b border-[#E5E5E5] hover:bg-[#F9F9F9]">
-                    <span className="text-xs tracking-widest">プライバシーポリシー</span>
-                    <ChevronRight size={16} className="text-[#777777]" />
-                </Link>
-                <Link href="/mypage/help/tokushoho" className="flex items-center justify-between p-4 hover:bg-[#F9F9F9]">
-                    <span className="text-xs tracking-widest">店舗情報</span>
-                    <ChevronRight size={16} className="text-[#777777]" />
-                </Link>
-            </div>
-        </section>
+        {!isCastOrStore && (
+          <section>
+              <div className="mb-4">
+                  <h2 className="text-sm font-bold tracking-widest">法令・ポリシー</h2>
+              </div>
+              <div className="bg-white border border-[#E5E5E5]">
+                  <Link href="/mypage/help/terms" className="flex items-center justify-between p-4 border-b border-[#E5E5E5] hover:bg-[#F9F9F9]">
+                      <span className="text-xs tracking-widest">利用規約</span>
+                      <ChevronRight size={16} className="text-[#777777]" />
+                  </Link>
+                  <Link href="/mypage/help/privacy" className="flex items-center justify-between p-4 border-b border-[#E5E5E5] hover:bg-[#F9F9F9]">
+                      <span className="text-xs tracking-widest">プライバシーポリシー</span>
+                      <ChevronRight size={16} className="text-[#777777]" />
+                  </Link>
+                  <Link href="/mypage/help/tokushoho" className="flex items-center justify-between p-4 hover:bg-[#F9F9F9]">
+                      <span className="text-xs tracking-widest">店舗情報</span>
+                      <ChevronRight size={16} className="text-[#777777]" />
+                  </Link>
+              </div>
+          </section>
+        )}
 
       </main>
     </div>

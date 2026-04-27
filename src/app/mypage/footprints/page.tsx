@@ -7,7 +7,7 @@ import { ArrowLeft, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function FootprintsPage() {
-  const { user } = useUser();
+  const { user, checkUnreadFootprints } = useUser();
   const router = useRouter();
   const [footprints, setFootprints] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -80,7 +80,11 @@ export default function FootprintsPage() {
            content: `[SYSTEM_LIKE]${user?.name || 'キャスト'}さんからいいねが届いています！早速チェックしてみて！`,
            is_read: false
         });
-      if (notifError) console.error("Notification insert error:", notifError);
+      if (notifError) {
+          console.error("Notification insert error:", notifError);
+      } else if (checkUnreadFootprints) {
+          await checkUnreadFootprints();
+      }
   };
 
   const getTimeAgo = (dateString: string) => {

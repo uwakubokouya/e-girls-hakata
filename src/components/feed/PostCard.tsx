@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { Heart, MessageCircle, Clock, CalendarCheck, Lock, ArrowLeft, Play } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/providers/UserProvider';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import MediaWatermark from '@/components/security/MediaWatermark';
 
 interface PostProps {
@@ -24,6 +25,8 @@ interface PostProps {
   showFollowButton?: boolean;
   isFollowing?: boolean;
   onFollowToggle?: () => void;
+  storeName?: string;
+  storeProfileId?: string;
 }
 
 export default function PostCard({
@@ -44,6 +47,8 @@ export default function PostCard({
   showFollowButton = false,
   isFollowing = false,
   onFollowToggle,
+  storeName,
+  storeProfileId,
 }: PostProps) {
   const router = useRouter();
   const { user } = useUser();
@@ -51,8 +56,35 @@ export default function PostCard({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showLockedPromptModal, setShowLockedPromptModal] = useState(false);
   const [fullscreenMedia, setFullscreenMedia] = useState<string | null>(null);
+  const [localIsLocked, setLocalIsLocked] = useState(isLocked);
+  
+  useEffect(() => {
+      setLocalIsLocked(isLocked);
+  }, [isLocked]);
+  
+  const handleDirectFollow = async () => {
+      if (!user) return;
+      try {
+          const { error } = await supabase
+              .from('sns_follows')
+              .insert({
+                  follower_id: user.id,
+                  following_id: castId
+              });
+              
+          if (!error || error.code === '23505') { // 23505 is unique violation (already following)
+              setLocalIsLocked(false);
+              setShowLockedPromptModal(false);
+              if (onFollowToggle) onFollowToggle();
+          } else {
+              console.error('Follow error:', error);
+          }
+      } catch (err) {
+          console.error(err);
+      }
+  };
 
-  const shouldBlur = isLocked || (user?.settings?.image_blur_enabled && !isImagesRevealed);
+  const shouldBlur = localIsLocked || (user?.settings?.image_blur_enabled && !isImagesRevealed);
 
   const handleAuthAction = () => {
     if (!user) {
@@ -79,10 +111,19 @@ export default function PostCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-2">
-            <Link href={`/cast/${castId}`} className="flex items-baseline gap-2 truncate hover:opacity-70 transition-opacity">
-              <span className="font-bold text-sm tracking-widest uppercase truncate text-black">{castName}</span>
-              <span className="text-[10px] text-[#777777] shrink-0 font-medium">{timeAgo}</span>
-            </Link>
+            <div className="flex flex-col">
+              <Link href={`/cast/${castId}`} className="flex items-baseline gap-2 truncate hover:opacity-70 transition-opacity">
+                <span className="font-bold text-sm tracking-widest uppercase truncate text-black">{castName}</span>
+                <span className="text-[10px] text-[#777777] shrink-0 font-medium">{timeAgo}</span>
+              </Link>
+              {storeName && storeProfileId && (
+                <Link href={`/cast/${storeProfileId}`} className="inline-block mt-1">
+                  <span className="text-[10px] text-[#777777] bg-[#F9F9F9] border border-[#E5E5E5] px-2 py-0.5 tracking-widest hover:bg-[#E5E5E5] transition-colors">
+                    {storeName}
+                  </span>
+                </Link>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {showFollowButton && user?.id !== castId && (
                   <button 
@@ -108,10 +149,10 @@ export default function PostCard({
           </div>
           
           <div className="relative mb-4">
-              <p className={`text-[13px] text-[#333333] leading-relaxed whitespace-pre-wrap break-words font-light ${isLocked ? 'blur-[4px] select-none pointer-events-none' : ''}`}>
+              <p className={`text-[13px] text-[#333333] leading-relaxed whitespace-pre-wrap break-words font-light ${localIsLocked ? 'blur-[4px] select-none pointer-events-none' : ''}`}>
                 {content}
               </p>
-              {isLocked && images.length === 0 && (
+              {localIsLocked && images.length === 0 && (
                   <div 
                       className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer"
                       onClick={() => {
@@ -144,7 +185,7 @@ export default function PostCard({
                     <div 
                        key={idx} 
                        onClick={() => {
-                         if (isLocked) {
+                         if (localIsLocked) {
                              if (!user) {
                                  if (typeof window !== 'undefined') {
                                      sessionStorage.setItem('authRedirect', `/cast/${castId}`);
@@ -193,7 +234,7 @@ export default function PostCard({
                          {!shouldBlur && <MediaWatermark />}
                         {shouldBlur && idx === 0 && (
                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-                               {isLocked ? (
+                               {localIsLocked ? (
                                    <div className="flex items-center gap-2 bg-black/80 px-4 py-2 text-white text-[10px] tracking-widest font-bold shadow-lg">
                                        <Lock size={14} />
                                        {lockReason}
@@ -350,8 +391,11 @@ export default function PostCard({
              <h3 className="text-sm font-bold tracking-widest mb-2 uppercase text-black">Followers Only</h3>
              
              <div className="text-xs text-[#333333] tracking-widest leading-relaxed mb-8 flex flex-col gap-4 text-center mt-3">
-               <p>この投稿はフォロワー限定です。</p>
-               <p className="font-bold text-[#E02424]">キャストのプロフィールページで<br />フォローして投稿を見ますか？</p>
+               <p>
+                 「<span className="font-bold text-black">フォロー</span>」していただきますと、<br />
+                 フォロワー様だけの限定コンテンツをご覧いただけます。
+               </p>
+               <p className="font-bold text-[#E02424]">ぜひ、下記ボタンよりチェックしてみてください。</p>
              </div>
              
              <div className="w-full flex">
@@ -362,10 +406,10 @@ export default function PostCard({
                  キャンセル
                </button>
                <button 
-                 onClick={() => router.push(`/cast/${castId}`)}
+                 onClick={handleDirectFollow}
                  className="flex-1 py-4 text-xs tracking-widest bg-black text-white hover:bg-black/90 transition-colors font-bold"
                >
-                 プロフィールへ
+                 フォローする
                </button>
              </div>
            </div>

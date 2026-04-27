@@ -6,7 +6,7 @@ export async function fetchBusinessEndTime(supabase: SupabaseClient): Promise<{ 
             .from('system_settings')
             .select('value')
             .eq('key', 'business_end_time')
-            .single();
+            .maybeSingle();
             
         if (!error && data?.value) {
             let parts = data.value.toString().split(':');

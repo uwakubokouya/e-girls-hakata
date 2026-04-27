@@ -1,6 +1,8 @@
 CREATE TABLE IF NOT EXISTS public.sns_reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id UUID NOT NULL REFERENCES public.sns_profiles(id) on delete cascade,
+    customer_name VARCHAR,
+    customer_phone VARCHAR,
     cast_id UUID NOT NULL REFERENCES public.sns_profiles(id) on delete cascade,
     store_id UUID,
     reserve_date DATE NOT NULL,

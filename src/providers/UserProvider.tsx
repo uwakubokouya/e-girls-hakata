@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
-export type UserRole = 'customer' | 'cast' | 'store' | 'system';
+export type UserRole = 'customer' | 'cast' | 'store' | 'system' | 'admin';
 
 export interface UserSettings {
   notifications_enabled: boolean;

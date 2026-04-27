@@ -30,13 +30,31 @@ export default function LoginPage() {
 
     const dummyEmail = `${phone}@sns.local`;
     
+    // 事前チェック: SNS機能が無効な店舗・キャストの場合は認証前にブロック
+    const { data: storeCheck } = await supabase.from('profiles').select('sns_enabled').eq('username', phone).eq('role', 'admin').maybeSingle();
+    if (storeCheck && storeCheck.sns_enabled === false) {
+        setErrorMsg("この店舗はSNS機能が無効化されています。");
+        setIsLoading(false);
+        return;
+    }
+    
+    const { data: castCheck } = await supabase.from('casts').select('store_id').eq('login_id', phone).maybeSingle();
+    if (castCheck && castCheck.store_id) {
+        const { data: p } = await supabase.from('profiles').select('sns_enabled').eq('store_id', castCheck.store_id).maybeSingle();
+        if (p && p.sns_enabled === false) {
+            setErrorMsg("所属店舗のSNS機能が無効化されています。");
+            setIsLoading(false);
+            return;
+        }
+    }
+
     // 1. Try standard Supabase Auth Login first
-    let { error } = await supabase.auth.signInWithPassword({
+    let { data: authData, error } = await supabase.auth.signInWithPassword({
       email: dummyEmail,
       password: password,
     });
 
-    if (!error) {
+    if (!error && authData?.user) {
       handleRedirect();
       return;
     }
@@ -51,6 +69,15 @@ export default function LoginPage() {
       .maybeSingle();
 
     if (castMatch) {
+      if (castMatch.store_id) {
+          const { data: p } = await supabase.from('profiles').select('sns_enabled').eq('store_id', castMatch.store_id).maybeSingle();
+          if (p && p.sns_enabled === false) {
+              setErrorMsg("所属店舗のSNS機能が無効化されています。");
+              setIsLoading(false);
+              return;
+          }
+      }
+
       // 3. Cast verified by `casts` table! Automatically create their SNS internal auth session.
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: dummyEmail,
@@ -93,7 +120,69 @@ export default function LoginPage() {
       return;
     }
 
-    // 4. Fails both normal and cast table
+    // 3. New: Check the `profiles` table directly for admin/store accounts!
+    // The user inputs 'phone' field, which acts as `username`
+    const { data: adminMatch } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('username', phone)
+      .eq('password_memo', password)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    if (adminMatch) {
+      if (adminMatch.sns_enabled === false) {
+          setErrorMsg("この店舗はSNS機能が無効化されています。");
+          setIsLoading(false);
+          return;
+      }
+
+      // Create their SNS internal auth session
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: dummyEmail,
+        password: password,
+      });
+
+      if (signUpError && signUpError.message.includes('already registered')) {
+         // They already have an SNS auth account, log them in
+         const { error: signInErr } = await supabase.auth.signInWithPassword({
+            email: dummyEmail,
+            password: password,
+         });
+         if (signInErr) {
+             setErrorMsg("店舗アカウントのログインに失敗しました（再認証エラー）。");
+             setIsLoading(false);
+             return;
+         }
+      } else if (signUpError) {
+        setErrorMsg("店舗アカウントの初期セットアップに失敗しました: " + signUpError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // Sync their profile as 'store'.
+      // Note: we fetch the current session to get the Auth ID since it might be different from adminMatch.id
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { error: upsertErr } = await supabase.from('sns_profiles').upsert({
+          id: session.user.id,
+          name: adminMatch.full_name || adminMatch.username || "店舗公式",
+          role: "store",
+          phone: phone, // Actually their username, used to link with profiles later
+          is_admin: true,
+          avatar_url: adminMatch.avatar_url || null,
+        }, { onConflict: 'id' });
+
+        if (upsertErr) {
+           console.error("Profile upsert failed during admin login:", upsertErr);
+        }
+      }
+
+      handleRedirect();
+      return;
+    }
+
+    // 4. Fails normal, cast, and admin tables
     setErrorMsg("ログインに失敗しました。ID（電話番号）とパスワードをご確認ください。");
     setIsLoading(false);
   };
@@ -107,7 +196,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-white flex flex-col px-8 pt-24 font-light">
       <div className="mb-8">
         <h1 className="text-3xl font-normal tracking-widest uppercase mb-2">Login</h1>
-        <p className="text-sm text-[#777777]">E-girls博多へようこそ。</p>
+        <p className="text-sm text-[#777777]">HimeMatchへようこそ。</p>
       </div>
 
       {errorMsg && (

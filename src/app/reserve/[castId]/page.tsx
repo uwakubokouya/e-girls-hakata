@@ -25,8 +25,10 @@ const formatTimeLabel = (mins: number) => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
-export default function ReservationPage({ params }: { params: Promise<{ castId: string }> }) {
-    const { castId } = use(params);
+export default function ReservationPage({ params }: { params: Promise<{ prefecture: string, castId: string }> }) {
+    const resolvedParams = use(params);
+    const castId = resolvedParams.castId;
+    const prefecture = decodeURIComponent(resolvedParams.prefecture || "");
     const router = useRouter();
     const { user } = useUser();
     
@@ -327,6 +329,8 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
 
             const reservationData = {
                 customer_id: user.id,
+                customer_name: user.name,
+                customer_phone: user.phone || null,
                 cast_id: cast?.id,
                 store_id: cast?.store_id,
                 reserve_date: selectedDate,
@@ -384,7 +388,10 @@ export default function ReservationPage({ params }: { params: Promise<{ castId: 
                     今しばらくお待ちくださいませ。
                 </div>
                 <button 
-                    onClick={() => router.push('/')}
+                    onClick={() => {
+                        const savedPref = localStorage.getItem('last_prefecture');
+                        router.push(savedPref ? `/${savedPref}` : '/');
+                    }}
                     className="premium-btn w-full max-w-sm py-4 bg-black text-white text-sm tracking-widest"
                 >
                     ホームへ戻る

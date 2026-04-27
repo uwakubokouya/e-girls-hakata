@@ -12,7 +12,7 @@ const inter = Inter({ subsets: ["latin"], display: 'swap' });
 const notoSansJP = Noto_Sans_JP({ subsets: ["latin"], weight: ["300", "400", "500", "700"], display: 'swap' });
 
 export const metadata: Metadata = {
-  title: "E-girls博多",
+  title: "HimeMatch",
   description: "Official SNS Platform",
 };
 

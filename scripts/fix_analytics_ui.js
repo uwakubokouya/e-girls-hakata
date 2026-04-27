@@ -1,89 +1,68 @@
 const fs = require('fs');
 
-let c = fs.readFileSync('src/app/admin/analytics/page.tsx', 'utf-8');
+let content = fs.readFileSync('src/app/admin/analytics/page.tsx', 'utf8');
 
-// 1. Casts filter by 'casts' table
-const tCasts = `    // Fetch casts for dropdown
-    useEffect(() => {
-        const fetchCasts = async () => {
-            const { data } = await supabase.from('sns_profiles').select('id, name');
-            if (data) {
-                setCasts(data);
-                // Also get actual casts table to merge real cast status if needed, but sns_profiles is enough for name mapping
-            }
-        };
-        fetchCasts();
-    }, []);`;
-
-const rCasts = `    // Fetch casts for dropdown
-    useEffect(() => {
-        const fetchCasts = async () => {
-            const { data } = await supabase.from('sns_profiles').select('id, name');
-            if (data) {
-                const { data: castsData } = await supabase.from('casts').select('id');
-                const castIds = new Set(castsData?.map(c => c.id) || []);
-                setCasts(data.filter(c => castIds.has(c.id)));
-            }
-        };
-        fetchCasts();
-    }, []);`;
-
-c = c.split(tCasts).join(rCasts);
-if(c === fs.readFileSync('src/app/admin/analytics/page.tsx', 'utf-8') && !c.includes(rCasts)) {
-    c = c.split(tCasts.replace(/\n/g, '\r\n')).join(rCasts.replace(/\n/g, '\r\n'));
-}
-
-// 2. Rename tab from ホーム画面 to 店舗アクセス
-const tTab = `                    <button 
+// 1. Change tab name "店舗別" to {user?.role === 'store' ? 'アクセス' : '店舗別'}
+const tabTarget = `                    <button 
                         onClick={() => setActiveTab('home')}
                         className={\`flex-1 py-3 text-xs tracking-widest uppercase transition-colors \${activeTab === 'home' ? 'bg-black text-white font-medium' : 'bg-white text-black hover:bg-[#F9F9F9]'}\`}
                     >
-                        ホーム画面
+                        店舗別
                     </button>`;
-const rTab = `                    <button 
+const tabReplace = `                    <button 
                         onClick={() => setActiveTab('home')}
                         className={\`flex-1 py-3 text-xs tracking-widest uppercase transition-colors \${activeTab === 'home' ? 'bg-black text-white font-medium' : 'bg-white text-black hover:bg-[#F9F9F9]'}\`}
                     >
-                        店舗アクセス
+                        {user?.role === 'store' ? 'アクセス' : '店舗別'}
                     </button>`;
-c = c.split(tTab).join(rTab);
-if (!c.includes("店舗アクセス")) {
-    c = c.split(tTab.replace(/\n/g, '\r\n')).join(rTab.replace(/\n/g, '\r\n'));
+
+if (content.includes(tabTarget)) {
+    content = content.replace(tabTarget, tabReplace);
+    console.log("Updated tab name.");
+} else {
+    // maybe spacing is different
+    const fallbackTabTarget = '>\\s*店舗別\\s*</button>';
+    if (new RegExp(fallbackTabTarget).test(content)) {
+        content = content.replace(/>\s*店舗別\s*<\/button>/, ">\n                        {user?.role === 'store' ? 'アクセス' : '店舗別'}\n                    </button>");
+        console.log("Updated tab name (fallback).");
+    } else {
+        console.log("Could not find tab name target.");
+    }
 }
 
-// 3. Show reserve summary for both tabs
-const tSumm = `                            {activeTab === 'cast' && (
-                            <div className="flex items-center gap-2 text-[#AAAAAA] text-[10px] tracking-widest border-t border-white/20 pt-4 w-full justify-center">
-                                予約クリック合計: <span className="text-white font-bold text-xs">{totalReserves.toLocaleString()}</span> 回
-                            </div>
-                            )}`;
-const rSumm = `                            <div className="flex items-center gap-2 text-[#AAAAAA] text-[10px] tracking-widest border-t border-white/20 pt-4 w-full justify-center">
-                                予約クリック合計: <span className="text-white font-bold text-xs">{totalReserves.toLocaleString()}</span> 回
-                            </div>`;
-c = c.split(tSumm).join(rSumm);
-if (!c.includes(rSumm)) {
-    c = c.split(tSumm.replace(/\n/g, '\r\n')).join(rSumm.replace(/\n/g, '\r\n'));
+// 2. Hide Target Area Dropdown for stores
+const dropdownTarget = `{(activeTab === 'cast' || activeTab === 'home') && (
+                        <div className="pt-4 border-t border-[#E5E5E5]">
+                            <label className="text-[10px] uppercase tracking-widest text-[#777777] mb-2 block">対象エリア</label>`;
+const dropdownReplace = `{user?.role !== 'store' && (activeTab === 'cast' || activeTab === 'home') && (
+                        <div className="pt-4 border-t border-[#E5E5E5]">
+                            <label className="text-[10px] uppercase tracking-widest text-[#777777] mb-2 block">対象エリア</label>`;
+if (content.includes(dropdownTarget)) {
+    content = content.replace(dropdownTarget, dropdownReplace);
+    console.log("Updated dropdown visibility.");
+} else {
+    console.log("Could not find dropdown target.");
 }
 
-// 4. Show reserve items for both tabs in daily list
-const tItem = `                                                {activeTab === 'cast' && (
-                                                <div className="flex items-end gap-1 w-20 justify-end border-l border-[#E5E5E5] pl-3">
-                                                    <span className="text-base tracking-wider text-[#777777]">
-                                                        {dailyReserveCounts[i].toLocaleString()}
-                                                    </span>
-                                                    <span className="text-[10px] text-[#AAAAAA] mb-[2px]">予約</span>
-                                                </div>
-                                                )}`;
-const rItem = `                                                <div className="flex items-end gap-1 w-20 justify-end border-l border-[#E5E5E5] pl-3">
-                                                    <span className="text-base tracking-wider text-[#777777]">
-                                                        {dailyReserveCounts[i].toLocaleString()}
-                                                    </span>
-                                                    <span className="text-[10px] text-[#AAAAAA] mb-[2px]">予約</span>
-                                                </div>`;
-c = c.split(tItem).join(rItem);
-if (!c.includes(rItem)) {
-    c = c.split(tItem.replace(/\n/g, '\r\n')).join(rItem.replace(/\n/g, '\r\n'));
+// 3. Hide Store Ranking for stores
+const rankingTarget = `{activeTab === 'home' && (
+                            <div className="bg-white border border-[#E5E5E5]">
+                                <div className="p-4 border-b border-[#E5E5E5] bg-[#F9F9F9] flex items-center justify-between">
+                                    <h3 className="text-xs font-bold tracking-widest flex items-center gap-2">
+                                        <BarChart2 size={14} className="stroke-[2]" />
+                                        店舗別 {rankingTab === 'pv' ? 'PV' : '予約数'}ランキング`;
+const rankingReplace = `{user?.role !== 'store' && activeTab === 'home' && (
+                            <div className="bg-white border border-[#E5E5E5]">
+                                <div className="p-4 border-b border-[#E5E5E5] bg-[#F9F9F9] flex items-center justify-between">
+                                    <h3 className="text-xs font-bold tracking-widest flex items-center gap-2">
+                                        <BarChart2 size={14} className="stroke-[2]" />
+                                        店舗別 {rankingTab === 'pv' ? 'PV' : '予約数'}ランキング`;
+if (content.includes(rankingTarget)) {
+    content = content.replace(rankingTarget, rankingReplace);
+    console.log("Updated ranking visibility.");
+} else {
+    console.log("Could not find ranking target.");
 }
 
-fs.writeFileSync('src/app/admin/analytics/page.tsx', c);
-console.log('analytics UI updated');
+fs.writeFileSync('src/app/admin/analytics/page.tsx', content, 'utf8');
+console.log('Done modifying analytics page');

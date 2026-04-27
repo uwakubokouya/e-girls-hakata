@@ -588,6 +588,20 @@ export default function AccountSettingsPage() {
               </div>
           </div>
       )}
+
+      {/* Image Cropper Modal */}
+      {pendingCrop && (
+        <ImageCropperModal
+          imageSrc={pendingCrop}
+          aspectRatio={1}
+          onCropComplete={(croppedFile) => {
+            setAvatarFile(croppedFile);
+            setPendingCrop(null);
+          }}
+          onCancel={() => setPendingCrop(null)}
+        />
+      )}
     </div>
   );
 }
+

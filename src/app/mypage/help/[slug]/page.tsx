@@ -2,6 +2,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { useUser } from "@/providers/UserProvider";
 
 // ----------------------------------------------------
 // 各種コンテンツコンポーネント
@@ -50,6 +51,63 @@ const SystemContent = () => (
         </section>
     </div>
 );
+
+const AboutContent = () => {
+    const { user } = useUser();
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500 font-light text-[13px] leading-loose tracking-widest text-[#333]">
+            {/* 全ユーザー共通の概要 */}
+            <section>
+                <h3 className="font-bold text-black border-b border-black pb-2 mb-4">HimeMatchとは？</h3>
+                <p>HimeMatchは、あなたと理想のキャストをつなぐ最高級の総合ポータルサイトです。<br/>最新の出勤情報、SNS連携、シームレスな予約システムを統合し、これまでにないスマートでプレミアムな夜のエンターテインメント体験を提供します。</p>
+            </section>
+
+            {/* ロール別のチュートリアル */}
+            <section>
+                <h3 className="font-bold text-black border-b border-black pb-2 mb-4">
+                    {user?.role === 'store' ? '店舗向けチュートリアル' : 
+                     user?.role === 'cast' ? 'キャスト向けチュートリアル' : 
+                     user?.role === 'customer' ? '会員様向けチュートリアル' : 
+                     'ご利用チュートリアル'}
+                </h3>
+                
+                {(!user || !['store', 'cast', 'customer'].includes(user?.role)) && (
+                    <ul className="list-disc pl-4 space-y-4">
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">無料会員登録のメリット</span><br/>会員登録をしていただくと、すべての機能がフルにご利用いただけます。まずは無料会員登録をして、すべての機能を体験してみてください。</li>
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">キャストと直接DM</span><br/>気になるキャストと直接メッセージのやり取りができ、来店前のコミュニケーションが楽しめます。</li>
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">限定タイムラインの閲覧</span><br/>お気に入りのキャストをフォローすると、フォロワー限定の特別な画像や動画がアンロックされます。</li>
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">スマートなネット予約</span><br/>24時間いつでも、お目当てのキャストの空き状況を確認してスムーズに予約が完了します。</li>
+                    </ul>
+                )}
+
+                {user?.role === 'customer' && (
+                    <ul className="list-disc pl-4 space-y-4">
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">出勤情報の確認と予約</span><br/>「本日出勤」タブやキャストのプロフィールから、リアルタイムの出勤・空き枠情報を確認できます。「予約する」ボタンからスムーズにネット予約が可能です。</li>
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">お気に入りのフォロー</span><br/>タイムラインで気になるキャストを見つけたら、「フォロー」しましょう。フォロワー限定の特別な投稿がタイムラインに表示されるようになります。</li>
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">ダイレクトメッセージ (DM)</span><br/>キャストのプロフィールにある「メッセージ」ボタンから、直接DMを送ることができます。来店前の要望やお店の場所の確認などに活用してください。</li>
+                    </ul>
+                )}
+
+                {user?.role === 'cast' && (
+                    <ul className="list-disc pl-4 space-y-4">
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">プロフィールの充実</span><br/>あなたの魅力が伝わるように、プロフィール画像やカバー画像を魅力的なものに設定しましょう。マイページからいつでも更新可能です。</li>
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">タイムライン投稿</span><br/>日常の様子や出勤の告知などをタイムラインに投稿してファンを増やしましょう。「フォロワー限定」に設定して、特別感を演出することも可能です。</li>
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">お客様とのDM</span><br/>お客様から届いたメッセージには丁寧に返信しましょう。来店前の安心感につながり、指名獲得のチャンスが広がります。</li>
+                    </ul>
+                )}
+
+                {user?.role === 'store' && (
+                    <ul className="list-disc pl-4 space-y-4">
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">店舗公式アカウントの運用</span><br/>店舗公式として、イベント情報やおすすめキャストの紹介などをタイムラインに投稿し、集客に活用しましょう。</li>
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">在籍キャストのサポート</span><br/>所属するキャストのアカウントを一元管理できます。各キャストのプロフィールや投稿状況をサポートしてください。</li>
+                        <li><span className="font-bold border-b border-black/20 pb-0.5 inline-block mb-1">予約・シフトの管理</span><br/>CTI・予約管理システムと連携し、店舗全体の予約状況やキャストの出勤シフトをリアルタイムに把握・調整できます。</li>
+                    </ul>
+                )}
+            </section>
+        </div>
+    );
+};
 
 const FlowContent = () => (
     <div className="space-y-8 animate-in fade-in duration-500 font-light text-[13px] leading-loose tracking-widest text-[#333]">
@@ -101,7 +159,7 @@ const RulesContent = () => (
 const TermsContent = () => (
     <div className="space-y-6 animate-in fade-in duration-500 font-light text-[11px] leading-relaxed tracking-wider text-[#555] whitespace-pre-wrap">
         <p className="font-bold text-sm text-black border-b border-black pb-2 mb-4">利用規約</p>
-        {"E-girls博多（以下、「当店」という）が提供するサービスのご利用に関し、以下の通り利用規約（以下、「本規約」という）を定めます。\n\n"}
+        {"HimeMatch（以下、「当店」という）が提供するサービスのご利用に関し、以下の通り利用規約（以下、「本規約」という）を定めます。\n\n"}
         <p className="font-bold text-black mt-4">第1条（適用対象）</p>
         {"当店のサービスを利用するすべてのお客様に適用されます。\n\n"}
         <p className="font-bold text-black mt-4">第2条（ご利用をお断りする方）</p>
@@ -128,7 +186,7 @@ const TermsContent = () => (
 const PrivacyContent = () => (
     <div className="space-y-6 animate-in fade-in duration-500 font-light text-[11px] leading-relaxed tracking-wider text-[#555] whitespace-pre-wrap">
         <p className="font-bold text-sm text-black border-b border-black pb-2 mb-4">プライバシーポリシー</p>
-        {"E-girls博多（以下「当店」といいます）は、お客様の個人情報保護の重要性を深く認識し、以下の方針に基づき個人情報の厳格な保護に努めます。\n\n"}
+        {"HimeMatch（以下「当店」といいます）は、お客様の個人情報保護の重要性を深く認識し、以下の方針に基づき個人情報の厳格な保護に努めます。\n\n"}
         <p className="font-bold text-black mt-4">1. 個人情報の収集・利用</p>
         {"当店は、ご予約の管理、サービス向上のための各種認証（電話番号等）、およびお客様の好み・設定の保存のため、必要最小限の個人情報を適正な手段により取得します。\n\n"}
         <p className="font-bold text-black mt-4">2. 第三者提供の制限</p>
@@ -147,7 +205,7 @@ const TokushohoContent = () => (
         <div className="border border-[#E5E5E5] bg-white text-[12px]">
             <div className="flex border-b border-[#E5E5E5] p-3">
                 <div className="w-1/3 text-black font-bold">運営主体</div>
-                <div className="w-2/3">E-girls博多</div>
+                <div className="w-2/3">HimeMatch</div>
             </div>
             <div className="block border-b border-[#E5E5E5] p-3">
                 <div className="w-full text-black font-bold mb-2">所在地</div>
@@ -181,7 +239,7 @@ const TokushohoContent = () => (
             </div>
             <div className="flex border-b border-[#E5E5E5] p-3">
                 <div className="w-1/3 text-black font-bold">サービス<br/>利用料金</div>
-                <div className="w-2/3 flex items-center leading-normal">「料金システム」ページに記載された価格となります。</div>
+                <div className="w-2/3 flex items-center leading-normal">各店舗ごとに異なります。詳細は各店舗またはキャストのページをご確認ください。</div>
             </div>
             <div className="flex border-b border-[#E5E5E5] p-3">
                 <div className="w-1/3 text-black font-bold">支払方法</div>
@@ -209,9 +267,8 @@ export default function HelpDetailPage({ params }: { params: Promise<{ slug: str
   const { slug } = React.use(params);
   
   const contentMap: Record<string, { title: string, component: React.ReactNode }> = {
-      system: { title: "料金システムについて", component: <SystemContent /> },
+      about: { title: "HimeMatchのご利用ガイド", component: <AboutContent /> },
       flow: { title: "ご予約・キャンセルの流れ", component: <FlowContent /> },
-      rules: { title: "当店のご利用ルール", component: <RulesContent /> },
       terms: { title: "利用規約", component: <TermsContent /> },
       privacy: { title: "プライバシーポリシー", component: <PrivacyContent /> },
       tokushoho: { title: "店舗情報", component: <TokushohoContent /> }
