@@ -725,6 +725,7 @@ export default function Home() {
                 lockReason={post.lockReason}
                 storeName={post.storeName}
                 storeProfileId={post.storeProfileId}
+                postType={post.post_type}
               />
             ))
           ) : (

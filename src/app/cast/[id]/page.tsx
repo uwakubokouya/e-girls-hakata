@@ -330,7 +330,7 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
                  isWorkingToday: false, // TODO: Link to real shifts per post if needed
                  isLocked: p.isLocked,
                  lockReason: p.lockReason,
-                 post_type: p.post_type
+                 postType: p.post_type
              };
          }));
       }

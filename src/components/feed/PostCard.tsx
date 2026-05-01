@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { Heart, MessageCircle, Clock, CalendarCheck, Lock, ArrowLeft, Play } from 'lucide-react';
+import { Heart, MessageCircle, Clock, CalendarCheck, Lock, ArrowLeft, Play, MoreVertical, Edit, Trash2, Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/providers/UserProvider';
 import { useState, useEffect } from 'react';
@@ -27,6 +27,7 @@ interface PostProps {
   onFollowToggle?: () => void;
   storeName?: string;
   storeProfileId?: string;
+  postType?: string;
 }
 
 export default function PostCard({
@@ -49,6 +50,7 @@ export default function PostCard({
   onFollowToggle,
   storeName,
   storeProfileId,
+  postType,
 }: PostProps) {
   const router = useRouter();
   const { user } = useUser();
@@ -57,6 +59,15 @@ export default function PostCard({
   const [showLockedPromptModal, setShowLockedPromptModal] = useState(false);
   const [fullscreenMedia, setFullscreenMedia] = useState<string | null>(null);
   const [localIsLocked, setLocalIsLocked] = useState(isLocked);
+  
+  const [showMenu, setShowMenu] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editContent, setEditContent] = useState(content);
+  const [editPostType, setEditPostType] = useState(postType || "全員");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeletedLocally, setIsDeletedLocally] = useState(false);
+
+  const canManage = user?.is_admin || user?.id === castId || user?.id === storeProfileId;
   
   useEffect(() => {
       setLocalIsLocked(isLocked);
@@ -98,7 +109,9 @@ export default function PostCard({
   };
 
   return (
-    <article className="border-b border-[#E5E5E5] p-5 bg-white hover:bg-[#FCFCFC] transition-colors">
+    <>
+      {!isDeletedLocally && (
+        <article className="border-b border-[#E5E5E5] p-5 bg-white hover:bg-[#FCFCFC] transition-colors">
       <div className="flex gap-4">
         {/* Avatar & Follow */}
         <div className="shrink-0 flex-col flex items-center">
@@ -140,10 +153,51 @@ export default function PostCard({
                      {isFollowing ? 'フォロー中' : 'フォロー'}
                   </button>
               )}
-              {user?.is_admin && onDelete && (
-                <button onClick={() => onDelete(id)} className="text-[#bbb] hover:text-red-500 transition-colors ml-2">
-                  <span className="text-[10px] border border-current px-2 py-0.5">削除</span>
-                </button>
+              {canManage && (
+                <div className="relative">
+                  <button 
+                    onClick={(e) => { e.preventDefault(); setShowMenu(!showMenu); }}
+                    className="p-1 text-[#bbb] hover:text-black transition-colors"
+                  >
+                    <MoreVertical size={16} />
+                  </button>
+                  {showMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={(e) => { e.preventDefault(); setShowMenu(false); }} />
+                      <div className="absolute right-0 mt-1 w-36 bg-white border border-black shadow-sm z-50 py-1">
+                        <button 
+                          onClick={(e) => { e.preventDefault(); setShowMenu(false); setShowEditModal(true); }}
+                          className="w-full text-left px-4 py-2 text-xs tracking-widest hover:bg-[#F9F9F9] transition-colors flex items-center gap-2"
+                        >
+                          <Edit size={12} /> 編集
+                        </button>
+                        <button 
+                          onClick={(e) => { e.preventDefault(); setShowMenu(false); setShowEditModal(true); }}
+                          className="w-full text-left px-4 py-2 text-xs tracking-widest hover:bg-[#F9F9F9] transition-colors flex items-center gap-2"
+                        >
+                          <Eye size={12} /> 公開範囲変更
+                        </button>
+                        <button 
+                          onClick={async (e) => {
+                             e.preventDefault();
+                             setShowMenu(false);
+                             if (window.confirm("この投稿を削除しますか？")) {
+                                 if (onDelete) {
+                                     onDelete(id);
+                                 } else {
+                                     await supabase.from('sns_posts').delete().eq('id', id);
+                                     setIsDeletedLocally(true);
+                                 }
+                             }
+                          }}
+                          className="w-full text-left px-4 py-2 text-xs tracking-widest text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                        >
+                          <Trash2 size={12} /> 削除
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -415,6 +469,65 @@ export default function PostCard({
            </div>
         </div>
       )}
-    </article>
+      </article>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowEditModal(false)}>
+           <div className="bg-white w-full max-w-sm p-6 border border-[#E5E5E5] flex flex-col items-center" onClick={e => e.stopPropagation()}>
+             <h3 className="text-sm font-bold tracking-widest mb-4 uppercase text-black">投稿の編集</h3>
+             <textarea
+                 value={editContent}
+                 onChange={e => setEditContent(e.target.value)}
+                 className="w-full bg-[#F9F9F9] border border-[#E5E5E5] p-3 text-sm resize-none outline-none focus:border-black transition-colors min-h-[120px] mb-4 font-light leading-relaxed"
+             />
+             <div className="w-full mb-6">
+                 <span className="text-[10px] font-bold tracking-widest uppercase mb-3 block text-[#777777]">公開範囲</span>
+                 <div className="flex gap-2">
+                     {["全員", "会員", "フォロワー"].map((type) => (
+                         <button
+                             key={type}
+                             onClick={() => setEditPostType(type)}
+                             className={`flex-1 py-2 text-[11px] font-bold tracking-widest border transition-colors ${
+                                 editPostType === type 
+                                 ? "bg-black text-white border-black" 
+                                 : "bg-transparent text-black border-[#E5E5E5] hover:border-black"
+                             }`}
+                         >
+                             {type}
+                         </button>
+                     ))}
+                 </div>
+             </div>
+             
+             <div className="w-full flex gap-3">
+               <button 
+                 onClick={() => setShowEditModal(false)}
+                 disabled={isUpdating}
+                 className="flex-1 py-3 bg-[#F9F9F9] border border-[#E5E5E5] text-xs tracking-widest text-[#777777] hover:bg-[#E5E5E5] transition-colors disabled:opacity-50"
+               >
+                 キャンセル
+               </button>
+               <button 
+                 onClick={async () => {
+                     setIsUpdating(true);
+                     const { error } = await supabase.from('sns_posts').update({ content: editContent, post_type: editPostType }).eq('id', id);
+                     if (!error) {
+                         setShowEditModal(false);
+                         window.location.reload();
+                     }
+                     setIsUpdating(false);
+                 }}
+                 disabled={isUpdating}
+                 className="flex-1 py-3 bg-black text-white text-xs tracking-widest font-medium hover:bg-black/80 transition-colors disabled:opacity-50 flex justify-center items-center gap-2"
+               >
+                 {isUpdating ? "保存中..." : "保存する"}
+               </button>
+             </div>
+           </div>
+        </div>
+      )}
+    </>
   );
 }
