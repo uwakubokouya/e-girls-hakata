@@ -33,6 +33,20 @@ export default function Home() {
     }
   }, [prefecture, router]);
   const [activeTab, setActiveTab] = useState<string>('official');
+  
+  useEffect(() => {
+    const saved = sessionStorage.getItem(`home_tab_${prefecture}`);
+    if (saved && ['official', 'following', 'recommended', 'working', 'summary', 'admin_posts'].includes(saved)) {
+      setActiveTab(saved);
+    }
+  }, [prefecture]);
+
+  useEffect(() => {
+    if (activeTab) {
+      sessionStorage.setItem(`home_tab_${prefecture}`, activeTab);
+    }
+  }, [activeTab, prefecture]);
+
   const { user, logout, isLoading: isUserLoading, hasUnreadMessages, hasUnreadNotifications, hasUnreadLikes, markLikesAsRead, markNotificationsAsRead, isTestMode } = useUser();
 
   // テストモード中の強制リダイレクト

@@ -20,6 +20,20 @@ export default function SearchPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(`search_tab_${prefecture}`);
+    if (saved && ['all', 'working', 'new'].includes(saved)) {
+      setActiveFilter(saved);
+    }
+  }, [prefecture]);
+
+  useEffect(() => {
+    if (activeFilter) {
+      sessionStorage.setItem(`search_tab_${prefecture}`, activeFilter);
+    }
+  }, [activeFilter, prefecture]);
+
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Filter Modal States
