@@ -1257,7 +1257,8 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
             {activeTab === 'cast_grid' && <div className="absolute top-0 w-full h-[1px] bg-black"></div>}
           </button>
           )}
-          {!isNonCastProfile && (
+          {/* REVIEW_TAB_HIDDEN: false && !isNonCastProfile && ( */}
+          {false && !isNonCastProfile && (
           <button 
              onClick={() => setActiveTab('reviews')}
              className={`flex-1 py-4 text-[11px] tracking-widest border-r border-[#E5E5E5] relative transition-colors ${activeTab === 'reviews' ? 'font-bold text-black bg-[#F9F9F9]' : 'font-normal text-[#777777] hover:bg-[#F9F9F9]'}`}
