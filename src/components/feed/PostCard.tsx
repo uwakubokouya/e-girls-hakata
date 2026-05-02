@@ -181,13 +181,15 @@ export default function PostCard({
                              setShowMenu(false); 
                              const newPinStatus = !localIsPinned;
                              setLocalIsPinned(newPinStatus);
-                             const { data, error } = await supabase.from('sns_posts').update({ is_pinned: newPinStatus }).eq('id', id).select();
+                             const { error } = await supabase.rpc('toggle_post_pin', {
+                                 p_post_id: id,
+                                 p_user_id: user?.id,
+                                 p_new_status: newPinStatus
+                             });
+                             
                              if (error) {
                                  console.error(error);
                                  alert("更新エラー: " + error.message);
-                                 setLocalIsPinned(!newPinStatus);
-                             } else if (!data || data.length === 0) {
-                                 alert("権限エラー: このポストを編集する権限がありません。");
                                  setLocalIsPinned(!newPinStatus);
                              } else {
                                  window.location.reload();
