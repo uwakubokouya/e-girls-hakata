@@ -1032,9 +1032,13 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
 
         {/* Top bar controls */}
         <div className="absolute top-0 w-full p-4 flex justify-between items-center z-50">
-            <button onClick={(e) => { e.stopPropagation(); router.back(); }} className="bg-white p-2 rounded-none text-black border border-black hover:bg-black hover:text-white transition-colors">
-                <ChevronLeft size={20} className="stroke-[1.5]" />
-            </button>
+            {user?.id !== id && user?.id !== resolvedCastId ? (
+                <button onClick={(e) => { e.stopPropagation(); router.back(); }} className="bg-white p-2 rounded-none text-black border border-black hover:bg-black hover:text-white transition-colors">
+                    <ChevronLeft size={20} className="stroke-[1.5]" />
+                </button>
+            ) : (
+                <div />
+            )}
             <div className="flex gap-2">
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleMessage(); }} 
