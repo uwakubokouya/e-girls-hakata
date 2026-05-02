@@ -181,9 +181,17 @@ export default function PostCard({
                              setShowMenu(false); 
                              const newPinStatus = !localIsPinned;
                              setLocalIsPinned(newPinStatus);
-                             await supabase.from('sns_posts').update({ is_pinned: newPinStatus }).eq('id', id);
-                             // Reload page to reflect sort order if needed, but local state update handles UI
-                             window.location.reload();
+                             const { data, error } = await supabase.from('sns_posts').update({ is_pinned: newPinStatus }).eq('id', id).select();
+                             if (error) {
+                                 console.error(error);
+                                 alert("更新エラー: " + error.message);
+                                 setLocalIsPinned(!newPinStatus);
+                             } else if (!data || data.length === 0) {
+                                 alert("権限エラー: このポストを編集する権限がありません。");
+                                 setLocalIsPinned(!newPinStatus);
+                             } else {
+                                 window.location.reload();
+                             }
                           }}
                           className="w-full text-left px-4 py-2 text-xs tracking-widest hover:bg-[#F9F9F9] transition-colors flex items-center gap-2"
                         >
