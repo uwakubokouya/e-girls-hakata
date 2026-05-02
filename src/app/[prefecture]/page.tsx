@@ -582,7 +582,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#E5E5E5]">
+      <header className="sticky top-0 z-40 bg-white border-b border-[#E5E5E5]">
         <div className="flex px-4 py-4 items-center justify-between">
           <div className="flex flex-col items-center gap-1">
             <button 
