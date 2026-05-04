@@ -717,11 +717,6 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
     
     // 客アカウントの場合はDM（注意事項）へ進む
     if (user.role === 'customer') {
-      if ((user.points ?? 0) < 100 || !user.is_vip) {
-          setShowDMBlockModal(true);
-          return;
-      }
-
       if (!isFollowing) {
           setShowFollowPromptModal(true);
           return;
@@ -834,44 +829,6 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
                 onClick={() => setShowDMDisabledModal(false)}
                 className="w-full py-3 bg-black text-white text-xs tracking-widest transition-colors"
               >
-                閉じる
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DM Block Modal Overlay (Bronze & VIP required) */}
-      {showDMBlockModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm p-6 border border-[#E5E5E5] flex flex-col items-center shadow-sm">
-            <div className="w-12 h-12 border border-black flex items-center justify-center mb-6 text-black relative">
-               <Lock size={20} className="stroke-[1.5]" />
-            </div>
-            <h3 className="text-sm font-bold tracking-widest uppercase mb-2">Members Only</h3>
-            <p className="text-[10px] text-[#777777] mb-6 tracking-widest">
-               これより先は<strong className="text-black">Bronzeランク以上かつVIP会員登録</strong>が必要です
-            </p>
-            
-            <div className="w-full bg-[#F9F9F9] border border-[#E5E5E5] p-5 mb-8 text-left space-y-4">
-               <div className="flex items-center justify-between text-xs tracking-widest border-b border-[#E5E5E5] pb-3 text-[#333]">
-                  <span>あなたの現在のポイント</span>
-                  <span className="font-bold text-black">{user?.points || 0} pt</span>
-               </div>
-               <div className="flex items-center justify-between text-xs tracking-widest pb-1 text-[#333]">
-                  <span>目標ポイント (Bronze)</span>
-                  <span className="font-bold text-[#B8860B]">100 pt</span>
-               </div>
-               <p className="text-[10px] text-[#777] leading-relaxed mt-2 pt-2 border-t border-[#E5E5E5]">
-                 ※ポイントは毎日のログインガチャや、ネット予約・口コミ投稿で貯めることができます。まずはポイントを貯めてランクアップを目指しましょう！
-               </p>
-            </div>
-
-            <div className="w-full space-y-3">
-              <Link href="/register" className="premium-btn w-full py-4 text-xs tracking-widest flex items-center justify-center bg-black text-white">
-                VIP会員登録に進む
-              </Link>
-              <button onClick={() => setShowDMBlockModal(false)} className="w-full py-4 flex items-center justify-center text-xs tracking-widest text-[#777] border border-[#E5E5E5] bg-white hover:bg-[#F9F9F9] transition-colors">
                 閉じる
               </button>
             </div>

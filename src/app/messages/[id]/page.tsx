@@ -73,15 +73,6 @@ export default function MessageRoomPage({ params }: { params: Promise<{ id: stri
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     if (!isUuid) return;
 
-    // アクセス権限チェック: 顧客はBronze(100pt) + VIPが必須
-    if (user.role === 'customer') {
-       if ((user.points ?? 0) < 100 || !user.is_vip) {
-           alert("キャストとのメッセージ機能はBronzeランク(100pt)以上のVIP会員限定です。");
-           router.push(`/cast/${id}`);
-           return;
-       }
-    }
-
     const fetchPartnerProfile = async () => {
        const { data } = await supabase.from('sns_profiles').select('name, avatar_url, bio, age_group, phone, role').eq('id', id).single();
        if (data) {
@@ -486,7 +477,10 @@ export default function MessageRoomPage({ params }: { params: Promise<{ id: stri
       {/* Input Footer Fixed */}
       <div className="fixed bottom-[83px] left-0 right-0 max-w-md mx-auto bg-white border-t border-[#E5E5E5] p-4 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
          {(() => {
-            const isMatch = messages.some(m => m.content?.startsWith('[SYSTEM_ACCEPT]')) || partnerProfile?.role === 'store' || partnerProfile?.role === 'system' || user?.role === 'store' || user?.role === 'system';
+            const hasSystemAccept = messages.some(m => m.content?.startsWith('[SYSTEM_ACCEPT]'));
+            const isBronzeAndVip = user?.role === 'customer' && (user.points ?? 0) >= 100 && user.is_vip;
+            const isMatch = hasSystemAccept || isBronzeAndVip || partnerProfile?.role === 'store' || partnerProfile?.role === 'system' || user?.role === 'store' || user?.role === 'system';
+            
             if (!isMatch) {
                if (user?.role === 'cast') {
                   return (
