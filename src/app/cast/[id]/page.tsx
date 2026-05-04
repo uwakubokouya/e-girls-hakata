@@ -277,7 +277,7 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
            .from('sns_reviews')
            .select(`
              id, rating, score, visited_date, content, created_at, reviewer_id, visibility, status,
-             sns_profiles!sns_reviews_reviewer_id_fkey(name, avatar_url, is_vip)
+             sns_profiles!sns_reviews_reviewer_id_fkey(name, avatar_url)
            `)
            .eq('target_cast_id', castIdToFetch)
            .order('created_at', { ascending: false });
@@ -1551,9 +1551,6 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
                                         <div>
                                             <div className="text-[11px] font-bold tracking-widest flex items-center gap-2">
                                                 {review.sns_profiles?.name || "匿名ユーザー"}
-                                                {review.sns_profiles?.is_vip && (
-                                                  <img src="/images/vip-crown.png" alt="VIP" className="h-3 object-contain" />
-                                                )}
                                                 {review.visibility === 'secret' && (
                                                     <span className="text-[8px] bg-[#D4AF37] text-white px-1.5 py-0.5 font-normal tracking-widest rounded-none">VIP</span>
                                                 )}
@@ -1923,7 +1920,7 @@ export default function CastProfilePage({ params }: { params: Promise<{ id: stri
                 .from('sns_reviews')
                 .select(`
                   id, rating, content, created_at, reviewer_id, status,
-                  sns_profiles!sns_reviews_reviewer_id_fkey(name, avatar_url, is_vip)
+                  sns_profiles!sns_reviews_reviewer_id_fkey(name, avatar_url)
                 `)
                 .eq('target_cast_id', resolvedCastId)
                 .order('created_at', { ascending: false });
