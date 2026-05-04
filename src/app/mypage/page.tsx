@@ -1,6 +1,6 @@
 "use client";
 import { useUser } from "@/providers/UserProvider";
-import { LogOut, ChevronRight, User as UserIcon, Settings, Bell, CircleHelp, MessageSquare, ShieldAlert, Footprints, BarChart3 } from "lucide-react";
+import { LogOut, ChevronRight, User as UserIcon, Settings, Bell, CircleHelp, MessageSquare, ShieldAlert, Footprints, BarChart3, Star, Check, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -8,28 +8,50 @@ import { supabase } from "@/lib/supabase";
 export default function MyPage() {
   const { user, logout, hasUnreadNotifications, hasUnreadFootprints } = useUser();
   const [isGachaLoading, setIsGachaLoading] = useState(false);
+  const [gachaModalOpen, setGachaModalOpen] = useState(false);
+  const [gachaState, setGachaState] = useState<'spinning' | 'result' | 'error' | 'already_claimed'>('spinning');
+  const [gachaResult, setGachaResult] = useState<{added: number, total: number} | null>(null);
+  const [gachaErrorMsg, setGachaErrorMsg] = useState("");
 
   const handleDailyGacha = async () => {
     if (!user) return;
     setIsGachaLoading(true);
+    setGachaModalOpen(true);
+    setGachaState('spinning');
+    
+    // Simulate spinning delay for 2.5 seconds minimum for UX
+    const delay = new Promise(resolve => setTimeout(resolve, 2500));
+
     try {
-      const { data, error } = await supabase.rpc('claim_daily_gacha_points', { p_user_id: user.id });
+      const dbCall = supabase.rpc('claim_daily_gacha_points', { p_user_id: user.id });
+      const [dbResult] = await Promise.all([dbCall, delay]);
+      
+      const { data, error } = dbResult;
       if (error) throw error;
       
       if (data.success) {
-         alert(`ガチャ成功！ ${data.points_added}ポイント獲得しました！\n現在のポイント: ${data.new_total}pt`);
-         window.location.reload();
+         setGachaResult({ added: data.points_added, total: data.new_total });
+         setGachaState('result');
       } else if (data.error === 'ALREADY_CLAIMED') {
-         alert('本日のガチャは既に引いています。また明日挑戦してください！');
+         setGachaState('already_claimed');
       } else {
-         alert('エラーが発生しました。');
+         setGachaErrorMsg("システムエラーが発生しました");
+         setGachaState('error');
       }
     } catch (err: any) {
       console.error(err, err?.message, err?.details, err?.hint);
-      alert(`エラーが発生しました: ${err?.message || '不明なエラー'}`);
+      setGachaErrorMsg(err?.message || "不明なエラーが発生しました");
+      setGachaState('error');
     } finally {
       setIsGachaLoading(false);
     }
+  };
+
+  const closeGachaModal = () => {
+     setGachaModalOpen(false);
+     if (gachaState === 'result') {
+        window.location.reload(); // Reload to update points in UI
+     }
   };
 
   return (
@@ -238,6 +260,71 @@ export default function MyPage() {
           )}
         </div>
       </main>
+
+      {/* Gacha Modal */}
+      {gachaModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
+          <div className="bg-[#111] border border-[#333] w-full max-w-sm p-8 text-center relative overflow-hidden">
+             
+             {gachaState === 'spinning' && (
+               <div className="flex flex-col items-center gap-6">
+                 <div className="relative w-24 h-24 flex items-center justify-center">
+                    {/* Spinning ring */}
+                    <div className="absolute inset-0 rounded-full border-4 border-[#333] border-t-[#D4AF37] animate-spin"></div>
+                    <Star size={32} className="text-[#D4AF37] animate-pulse" />
+                 </div>
+                 <h3 className="text-white tracking-[0.3em] font-light text-sm animate-pulse">抽選中...</h3>
+               </div>
+             )}
+
+             {gachaState === 'result' && (
+               <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-500">
+                 <div className="w-24 h-24 flex items-center justify-center bg-gradient-to-br from-[#D4AF37] to-[#8A6A1C] rounded-full shadow-[0_0_30px_rgba(212,175,55,0.4)]">
+                    <span className="text-4xl font-bold text-white drop-shadow-md">+{gachaResult?.added}</span>
+                 </div>
+                 <div>
+                   <h3 className="text-xl text-[#D4AF37] tracking-widest font-bold mb-2">ポイント獲得！</h3>
+                   <p className="text-xs text-[#AAA] tracking-widest">現在の累計: {gachaResult?.total} pt</p>
+                 </div>
+                 <button onClick={closeGachaModal} className="mt-4 w-full py-3 bg-white text-black font-bold text-xs tracking-widest hover:bg-[#CCC] transition-colors">
+                   閉じる
+                 </button>
+               </div>
+             )}
+
+             {gachaState === 'already_claimed' && (
+               <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-300">
+                 <div className="w-16 h-16 flex items-center justify-center bg-[#222] rounded-full">
+                    <Check size={24} className="text-[#777]" />
+                 </div>
+                 <div>
+                   <h3 className="text-white tracking-widest font-bold mb-2">本日は受取済みです</h3>
+                   <p className="text-xs text-[#777] tracking-widest">また明日挑戦してください！</p>
+                 </div>
+                 <button onClick={closeGachaModal} className="mt-4 w-full py-3 border border-[#333] text-white text-xs tracking-widest hover:bg-[#222] transition-colors">
+                   閉じる
+                 </button>
+               </div>
+             )}
+
+             {gachaState === 'error' && (
+               <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-300">
+                 <div className="w-16 h-16 flex items-center justify-center bg-[#311] border border-[#511] rounded-full">
+                    <X size={24} className="text-[#F55]" />
+                 </div>
+                 <div>
+                   <h3 className="text-[#F55] tracking-widest font-bold mb-2">エラー</h3>
+                   <p className="text-xs text-[#AAA] tracking-widest">{gachaErrorMsg}</p>
+                 </div>
+                 <button onClick={closeGachaModal} className="mt-4 w-full py-3 border border-[#333] text-white text-xs tracking-widest hover:bg-[#222] transition-colors">
+                   閉じる
+                 </button>
+               </div>
+             )}
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
